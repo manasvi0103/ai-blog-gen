@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { Link, ExternalLink, Upload, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react"
+import { Link, ExternalLink, Upload, CheckCircle, AlertCircle, ArrowLeft, Settings } from "lucide-react"
 import type { InternalLink, ExternalLink as ExternalLinkType, BlogBlock } from "@/types/api"
 import { api } from "@/lib/api"
 import { StepperHeader } from "@/components/stepper-header"
@@ -443,6 +443,15 @@ export default function ReviewPage() {
 
                   {!deploymentSuccess ? (
                     <div className="space-y-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => router.push('/wordpress-setup')}
+                        className="w-full"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        WordPress Setup
+                      </Button>
+
                       <Button
                         onClick={handleDeploy}
                         disabled={deploying}

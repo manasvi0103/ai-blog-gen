@@ -119,23 +119,56 @@ export default function DeployingPage() {
                 <span className="text-white text-2xl">✕</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Deployment Failed</h1>
-              <p className="text-gray-600">{deploymentError}</p>
+
+              {deploymentError?.includes('WordPress configuration') || deploymentError?.includes('Incomplete WordPress configuration') ? (
+                <div className="space-y-3">
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    WordPress configuration is missing or incomplete. Please set up your WordPress credentials first.
+                  </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                    <p className="text-sm text-blue-800">
+                      <strong>Required:</strong> WordPress site URL, username, and application password
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-600">{deploymentError}</p>
+              )}
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                onClick={handleRetryDeployment}
-                className="bg-[#0066cc] hover:bg-blue-700"
-              >
-                Retry Deployment
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleBackToHome}
-              >
-                Back to Home
-              </Button>
+              {deploymentError?.includes('WordPress configuration') || deploymentError?.includes('Incomplete WordPress configuration') ? (
+                <>
+                  <Button
+                    onClick={() => router.push('/wordpress-setup')}
+                    className="bg-[#0066cc] hover:bg-blue-700"
+                  >
+                    Setup WordPress
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleBackToHome}
+                  >
+                    Back to Home
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleRetryDeployment}
+                    className="bg-[#0066cc] hover:bg-blue-700"
+                  >
+                    Retry Deployment
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleBackToHome}
+                  >
+                    Back to Home
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </main>

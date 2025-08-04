@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { Building2, FileText, Clock, Trash2, Play, Loader2 } from "lucide-react"
+import { Building2, FileText, Clock, Trash2, Play, Loader2, Settings } from "lucide-react"
 import type { Company, Draft } from "@/types/api"
 import { api } from "@/lib/api"
 
@@ -130,9 +130,21 @@ export default function HomePage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="text-2xl font-bold text-[#0066cc]">ArticleScribe</h1>
-            <p className="text-gray-600">AI Blog Builder with WordPress Deployment</p>
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-[#0066cc]">ArticleScribe</h1>
+              <p className="text-gray-600">AI Blog Builder with WordPress Deployment</p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/wordpress-setup')}
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                WordPress Setup
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -153,9 +165,21 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-bold text-[#0066cc]">ArticleScribe</h1>
-          <p className="text-gray-600">AI Blog Builder with WordPress Deployment</p>
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-[#0066cc]">ArticleScribe</h1>
+            <p className="text-gray-600">AI Blog Builder with WordPress Deployment</p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => router.push('/wordpress-setup')}
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              WordPress Setup
+            </Button>
+          </div>
         </div>
       </header>
 
