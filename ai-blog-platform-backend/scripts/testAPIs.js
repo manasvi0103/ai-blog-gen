@@ -1,12 +1,13 @@
 // scripts/testAPIs.js
 const axios = require('axios');
+const dotenv = require('dotenv');
 require('dotenv').config();
 
 async function testAPIs() {
   console.log('🔍 Testing API Connections...\n');
 
   // Test Gemini API
-  if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here') {
+  if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'AIzaSyDoD_dJdV6P8fliHi6MRling6js0Y9812k') {
     try {
       console.log('Testing Gemini API...');
       console.log('🔑 API Key:', process.env.GEMINI_API_KEY ? 'SET' : 'NOT SET');

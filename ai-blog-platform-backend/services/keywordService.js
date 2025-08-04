@@ -214,36 +214,43 @@ class KeywordService {
         ? `Current industry trends and hot topics: ${trendData.map(t => t.title).slice(0, 5).join(', ')}`
         : 'Focus on evergreen solar industry topics with high search volume';
 
-      const prompt = `Generate exactly ${count} high-value SEO keywords for ${companyName} in the solar energy industry.
-      Consider current market trends, competitor analysis, and search volume opportunities.
+      const prompt = `Generate exactly ${count} high-value SEO keywords specifically for ${companyName} in the solar energy industry.
+      Focus on ${companyName}'s core services and target audience.
 
       ${trendContext}
+
+      COMPANY-SPECIFIC REQUIREMENTS FOR ${companyName}:
+      - Focus on ${companyName}'s main services: Solar Design, Engineering, Permitting, Installation Support
+      - Target solar professionals, installers, contractors, and project developers
+      - Emphasize technical expertise and professional services
+      - Include topics relevant to solar project development and implementation
 
       IMPORTANT GUIDELINES:
       - DO NOT include generic location keywords like "India", "USA", "California", "near me", etc.
       - DO NOT include generic terms like "best solar company" or "top solar installer"
-      - Focus on technical, educational, and service-specific topics
+      - Focus on technical, educational, and service-specific topics that ${companyName} can address
+      - Include keywords related to solar design, engineering, permitting, and installation processes
 
-      Focus on:
-      1. Keywords that drive qualified leads and conversions
-      2. Topics showing search volume growth and trending interest
-      3. Competitive opportunities and content gaps
-      4. Commercial and residential solar technical topics
-      5. Emerging solar technologies and industry developments
-      6. Seasonal and timely solar topics
+      Focus on ${companyName}-relevant topics:
+      1. Solar design and engineering processes
+      2. Permitting and compliance requirements
+      3. Installation best practices and technical guides
+      4. Solar project development and management
+      5. Industry standards and regulations
+      6. Technical troubleshooting and optimization
 
       Return only a JSON array with exactly ${count} objects containing:
-      - focusKeyword: the main keyword phrase (consider trending topics and search intent)
-      - articleFormat: one of "how-to", "guide", "listicle", "comparison", "review", "case-study"
+      - focusKeyword: the main keyword phrase (must be relevant to ${companyName}'s services)
+      - articleFormat: one of "how-to", "guide", "listicle", "comparison", "review", "case-study", "analysis"
       - wordCount: suggested word count like "1500-2000" (MAX 2500 words)
-      - targetAudience: specific target audience
-      - objective: content goal (Lead generation, Brand awareness, Education, etc.)
+      - targetAudience: specific target audience (focus on solar professionals)
+      - objective: content goal (Lead Generation, Brand Awareness, Thought Leadership, etc.)
       - source: "ai-trends"
 
-      Example format:
+      Example format for ${companyName}:
       [
-        {"focusKeyword": "solar panel installation cost 2024", "articleFormat": "guide", "wordCount": "1800-2200", "targetAudience": "Homeowners researching solar", "objective": "Lead generation", "source": "ai-trends"},
-        {"focusKeyword": "commercial solar ROI calculator", "articleFormat": "tool", "wordCount": "1200-1500", "targetAudience": "Business owners", "objective": "Lead generation", "source": "ai-trends"}
+        {"focusKeyword": "solar design software comparison 2024", "articleFormat": "comparison", "wordCount": "1800-2200", "targetAudience": "Solar Design Engineers", "objective": "Thought Leadership", "source": "ai-trends"},
+        {"focusKeyword": "solar permitting process optimization", "articleFormat": "guide", "wordCount": "1600-2000", "targetAudience": "Solar Installers", "objective": "Lead Generation", "source": "ai-trends"}
       ]`;
 
       const response = await geminiService.generateContent(prompt, {

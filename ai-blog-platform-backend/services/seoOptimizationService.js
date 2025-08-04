@@ -25,7 +25,7 @@ class SEOOptimizationService {
    * @returns {Object} SEO-optimized content structure
    */
   async generateSEOOptimizedContent(contentData) {
-    const { selectedKeyword, selectedH1, selectedMetaTitle, selectedMetaDescription, companyName, targetWordCount = 2500 } = contentData;
+    const { selectedKeyword, selectedH1, selectedMetaTitle, selectedMetaDescription, companyName, companyContext, targetWordCount = 2500 } = contentData;
 
     console.log(`🎯 GENERATING SEO-OPTIMIZED CONTENT FOR RANKMATH 85-100/100 SCORE`);
     console.log(`   Focus Keyword: "${selectedKeyword}"`);
@@ -44,7 +44,7 @@ class SEOOptimizationService {
     const contentStructure = await this.generateKeywordOptimizedStructure(selectedKeyword, targetWordCount);
 
     // Step 3: Create SEO-compliant content blocks
-    const contentBlocks = await this.generateSEOContentBlocks(contentStructure, selectedKeyword, companyName);
+    const contentBlocks = await this.generateSEOContentBlocks(contentStructure, selectedKeyword, companyName, companyContext);
 
     // Step 4: Validate SEO compliance
     const seoValidation = this.validateSEOCompliance(contentBlocks, selectedKeyword, optimizedMeta);
@@ -115,45 +115,57 @@ Return JSON format:
   }
 
   /**
-   * Generate keyword-optimized content structure
+   * Generate keyword-optimized content structure with WattMonk styling
    */
   async generateKeywordOptimizedStructure(keyword, targetWordCount) {
     const structure = {
       introduction: {
         wordCount: Math.round(targetWordCount * 0.08), // 8% - 200 words for 2500
         keywordRequirement: 'Must include focus keyword in first 100 words',
-        purpose: 'Hook reader and establish keyword relevance'
+        purpose: 'Hook reader and establish keyword relevance',
+        styling: 'Professional paragraph with Roboto font, engaging opener'
       },
       mainSections: [
         {
-          heading: `What is ${keyword}?`,
+          heading: `What Is ${keyword}?`,
+          headingStyle: 'H2 with #FBD46F color, Roboto font, Semi Bold (600), proper spacing',
           wordCount: Math.round(targetWordCount * 0.18), // 18% - 450 words
           keywordRequirement: 'Include keyword 2-3 times naturally',
-          purpose: 'Define and explain the main topic'
+          purpose: 'Define and explain the main topic',
+          contentStyle: 'Clear paragraphs with bullet points, professional tone'
         },
         {
-          heading: `Benefits of ${keyword}`,
+          heading: `Key Benefits of ${keyword}`,
+          headingStyle: 'H2 with #FBD46F color, Roboto font, Semi Bold (600), proper spacing',
           wordCount: Math.round(targetWordCount * 0.18),
           keywordRequirement: 'Include keyword variations',
-          purpose: 'Highlight advantages and value proposition'
+          purpose: 'Highlight advantages and value proposition',
+          contentStyle: 'Bullet points with clear benefits, professional formatting'
         },
         {
           heading: `How ${keyword} Works`,
+          headingStyle: 'H2 with #FBD46F color, Roboto font, Semi Bold (600), proper spacing',
           wordCount: Math.round(targetWordCount * 0.18),
           keywordRequirement: 'Include keyword in subheadings',
-          purpose: 'Explain process and methodology'
+          purpose: 'Explain process and methodology',
+          contentStyle: 'Step-by-step explanation with clear structure'
         },
         {
-          heading: `${keyword} Cost and ROI`,
+          heading: `${keyword} Cost and ROI Analysis`,
+          headingStyle: 'H2 with #FBD46F color, Roboto font, Semi Bold (600), proper spacing',
           wordCount: Math.round(targetWordCount * 0.18),
           keywordRequirement: 'Include keyword with cost-related terms',
-          purpose: 'Address financial considerations'
+          purpose: 'Address financial considerations',
+          contentStyle: 'Data-driven content with clear financial insights'
         }
       ],
       conclusion: {
+        heading: `Choose the Right ${keyword} Solution`,
+        headingStyle: 'H2 with #FBD46F color, Roboto font, Semi Bold (600), proper spacing',
         wordCount: Math.round(targetWordCount * 0.10), // 10% - 250 words
         keywordRequirement: 'Include keyword and call-to-action',
-        purpose: 'Summarize and encourage action'
+        purpose: 'Summarize and encourage action',
+        contentStyle: 'Strong conclusion with clear CTA, WattMonk branding'
       }
     };
 
@@ -163,7 +175,7 @@ Return JSON format:
   /**
    * Generate SEO-compliant content blocks
    */
-  async generateSEOContentBlocks(structure, keyword, companyName) {
+  async generateSEOContentBlocks(structure, keyword, companyName, companyContext = {}) {
     const blocks = [];
     let blockId = 1;
 
@@ -175,13 +187,39 @@ Return JSON format:
 - Establishes expertise and credibility
 - Previews the article value
 - Uses short, readable sentences
-- Company context: ${companyName}`;
 
-    const introContent = await geminiService.generateContent(introPrompt, { name: companyName });
+MANDATORY COMPANY INTEGRATION:
+- Company: ${companyName}
+- Services: ${companyContext.servicesOffered || 'Solar services'}
+- About: ${companyContext.aboutTheCompany || 'Professional solar company'}
+- Overview: ${companyContext.serviceOverview || 'Solar solutions provider'}
+
+REQUIREMENTS (MANDATORY - NO EXCEPTIONS):
+- MUST mention "${companyName}" by name at least 2 times in the introduction
+- MUST reference specific services: "${companyContext.servicesOffered}"
+- MUST include company expertise and background
+- MUST write as if you are representing ${companyName} directly
+- MUST show how ${companyName} helps clients with ${keyword}
+- NEVER use generic terms like "solar company" or placeholders
+- ALWAYS start with "At ${companyName}, we..." or "Are you ready to unlock the full potential of ${keyword}? At ${companyName}, we..."
+
+Example: "Are you ready to unlock the full potential of ${keyword}? At ${companyName}, we understand that a successful solar project goes beyond simply installing panels. Our expertise in ${companyContext.servicesOffered} has helped thousands of clients..."
+
+Write in a professional, authoritative tone that demonstrates ${companyName}'s expertise in ${keyword}.`;
+
+    const introContent = await geminiService.generateContent(introPrompt, companyContext);
+
+    // Enhance content with company info and links
+    const enhancedIntroContent = geminiService.enhanceContentWithCompanyInfo(
+      introContent.content,
+      companyContext,
+      keyword
+    );
+
     blocks.push({
       id: `intro-${blockId++}`,
       type: "paragraph",
-      content: introContent.content,
+      content: enhancedIntroContent,
       seoNotes: "Keyword in first 100 words for RankMath compliance"
     });
 
@@ -203,13 +241,43 @@ Return JSON format:
 - Use bullet points and short paragraphs
 - Include relevant statistics or examples
 - Maintain professional, authoritative tone
-- Company: ${companyName}`;
 
-      const sectionContent = await geminiService.generateContent(sectionPrompt, { name: companyName });
+MANDATORY COMPANY INTEGRATION:
+- Company: ${companyName}
+- Services: ${companyContext.servicesOffered || 'Solar services'}
+- Expertise: ${companyContext.serviceOverview || 'Solar solutions'}
+- About: ${companyContext.aboutTheCompany || 'Professional solar company'}
+
+REQUIREMENTS (MANDATORY):
+- MUST mention "${companyName}" by name at least once in this section
+- MUST reference specific services from: "${companyContext.servicesOffered}"
+- MUST include 1-2 relevant links naturally in the content
+- MUST show how ${companyName}'s expertise applies to ${keyword}
+- MUST include real examples from ${companyName}'s experience
+- NEVER use generic terms like "solar company" - always use "${companyName}"
+
+LINK INTEGRATION:
+- Include links to relevant industry resources (NREL, SEIA, Energy.gov)
+- Format links naturally: "According to NREL data on ${keyword} (https://www.nrel.gov/solar/), installations have increased..."
+- Include WattMonk service links where relevant
+
+Example: "${companyName}'s ${companyContext.servicesOffered} services have helped clients optimize their ${keyword} implementations. Our experience shows..."
+
+Reference ${companyName}'s specific services and expertise where relevant. Avoid placeholder text like [Company Name] or [Number].`;
+
+      const sectionContent = await geminiService.generateContent(sectionPrompt, companyContext);
+
+      // Enhance section content with company info and links
+      const enhancedSectionContent = geminiService.enhanceContentWithCompanyInfo(
+        sectionContent.content,
+        companyContext,
+        keyword
+      );
+
       blocks.push({
         id: `section-${blockId++}`,
         type: "paragraph",
-        content: sectionContent.content,
+        content: enhancedSectionContent,
         seoNotes: section.keywordRequirement
       });
     }
@@ -221,13 +289,46 @@ Return JSON format:
 - Summarizes key benefits
 - Includes strong call-to-action
 - Encourages reader to contact ${companyName}
-- Creates urgency or next steps`;
+- Creates urgency or next steps
 
-    const conclusionContent = await geminiService.generateContent(conclusionPrompt, { name: companyName });
+MANDATORY COMPANY INTEGRATION:
+- Company: ${companyName}
+- Services: ${companyContext.servicesOffered || 'Solar services'}
+- About: ${companyContext.aboutTheCompany || 'Professional solar company'}
+- Contact: Encourage readers to reach out to ${companyName} for ${keyword} solutions
+
+REQUIREMENTS:
+- MUST mention ${companyName} prominently in conclusion
+- MUST reference specific services: ${companyContext.servicesOffered}
+- MUST include contact information or website link
+- Create urgency around ${companyName}'s expertise
+- Include specific benefits of working with ${companyName}
+
+CALL-TO-ACTION EXAMPLES:
+- "Ready to optimize your ${keyword} strategy? ${companyName}'s expert team specializes in ${companyContext.servicesOffered}."
+- "Contact ${companyName} today for professional ${keyword} solutions."
+- "Visit www.wattmonk.com to learn how our ${companyContext.servicesOffered} can transform your ${keyword} approach."
+
+Make the call-to-action specific to ${companyName}'s services. Avoid generic placeholders.`;
+
+    const conclusionContent = await geminiService.generateContent(conclusionPrompt, companyContext);
+
+    // Enhance conclusion with company info and strong CTA
+    let enhancedConclusionContent = geminiService.enhanceContentWithCompanyInfo(
+      conclusionContent.content,
+      companyContext,
+      keyword
+    );
+
+    // Add strong company-specific CTA if missing
+    if (!enhancedConclusionContent.includes('contact') && !enhancedConclusionContent.includes('visit')) {
+      enhancedConclusionContent += `\n\nReady to optimize your ${keyword} strategy? Contact ${companyContext.name || 'our team'} today for expert ${companyContext.servicesOffered || 'solar services'}. Visit https://www.wattmonk.com to learn more about our comprehensive solutions.`;
+    }
+
     blocks.push({
       id: `conclusion-${blockId++}`,
       type: "paragraph",
-      content: conclusionContent.content,
+      content: enhancedConclusionContent,
       seoNotes: "Conclusion with keyword and CTA"
     });
 

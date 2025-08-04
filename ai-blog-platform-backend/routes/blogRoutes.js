@@ -463,11 +463,15 @@ router.post('/select-keyword-analyze', async (req, res) => {
 
     console.log(`✅ Updated blog with keyword: ${selectedKeyword}`);
 
-    // Get company context for Gemini
+    // Get complete company context for Gemini
     const companyContext = {
       name: blog.companyId?.name || 'WattMonk',
-      serviceOverview: blog.companyId?.serviceOverview || 'Professional solar services',
-      targetAudience: 'Solar industry professionals'
+      serviceOverview: blog.companyId?.serviceOverview || 'Professional solar design, engineering, permitting, and installation support services',
+      servicesOffered: blog.companyId?.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support',
+      aboutTheCompany: blog.companyId?.aboutTheCompany || 'WattMonk is a technology-driven solar services company providing end-to-end solar solutions.',
+      targetAudience: 'Solar industry professionals',
+      brandVoice: 'Professional, authoritative, helpful',
+      tone: 'Expert, trustworthy, solution-focused'
     };
 
     // Generate H1, meta title, and meta description using Gemini
@@ -487,7 +491,9 @@ router.post('/select-keyword-analyze', async (req, res) => {
     // Generate meta content using our new service
     const metaContent = await metaService.generateMetaData(keywordObj, {
       companyName: companyContext.name,
-      servicesOffered: 'Solar services'
+      servicesOffered: companyContext.servicesOffered,
+      serviceOverview: companyContext.serviceOverview,
+      aboutTheCompany: companyContext.aboutTheCompany
     });
 
     // Generate comprehensive competitor analysis
@@ -986,7 +992,12 @@ router.post('/generate-structured-content', async (req, res) => {
   try {
     const { draftId } = req.body;
 
-    const draft = await Draft.findById(draftId).populate('blogId');
+    const draft = await Draft.findById(draftId).populate({
+      path: 'blogId',
+      populate: {
+        path: 'companyId'
+      }
+    });
     if (!draft) {
       return res.status(404).json({ message: 'Draft not found' });
     }
@@ -997,6 +1008,16 @@ router.post('/generate-structured-content', async (req, res) => {
     const selectedMetaTitle = draft.selectedMetaTitle || `${selectedKeyword} | ${draft.blogId?.companyId?.name || 'Solar Company'}`;
     const selectedMetaDescription = draft.selectedMetaDescription || `Learn everything about ${selectedKeyword} for solar professionals.`;
     const companyName = draft.blogId?.companyId?.name || 'Solar Company';
+
+    // Get complete company context for content generation
+    const companyContext = {
+      name: draft.blogId?.companyId?.name || 'WattMonk',
+      serviceOverview: draft.blogId?.companyId?.serviceOverview || 'Professional solar design, engineering, permitting, and installation support services',
+      servicesOffered: draft.blogId?.companyId?.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support',
+      aboutTheCompany: draft.blogId?.companyId?.aboutTheCompany || 'WattMonk is a technology-driven solar services company providing end-to-end solar solutions.',
+      targetAudience: 'Solar industry professionals',
+      tone: 'Professional, authoritative, helpful'
+    };
 
     // Get target word count from the keyword data
     let targetWordCount = 2500; // default
@@ -1055,6 +1076,7 @@ router.post('/generate-structured-content', async (req, res) => {
       selectedMetaTitle,
       selectedMetaDescription,
       companyName,
+      companyContext, // Pass full company context
       targetWordCount
     });
 
@@ -1490,8 +1512,8 @@ router.post('/deploy-wordpress', async (req, res) => {
 <h1 class="wp-block-heading" style="color:#333333;font-size:2.5rem;font-weight:700">${block.content}</h1>
 <!-- /wp:heading -->`;
         } else if (block.type === 'h2') {
-          return `<!-- wp:heading {"level":2,"style":{"typography":{"fontSize":"2rem","fontWeight":"600"},"color":{"text":"#f4b942"}}} -->
-<h2 class="wp-block-heading" style="color:#f4b942;font-size:2rem;font-weight:600">${block.content}</h2>
+          return `<!-- wp:heading {"level":2,"style":{"typography":{"fontSize":"2rem","fontWeight":"600","fontFamily":"Roboto"},"color":{"text":"#FBD46F"}}} -->
+<h2 class="wp-block-heading" style="color:#FBD46F;font-size:2rem;font-weight:600;font-family:Roboto,Arial,sans-serif">${block.content}</h2>
 <!-- /wp:heading -->`;
         } else if (block.type === 'introduction') {
           let content = makeLinksClickable(block.content);
@@ -1657,16 +1679,22 @@ router.post('/deploy-wordpress', async (req, res) => {
     const draftData = {
       title: draft.selectedH1 || draft.title || `${draft.selectedKeyword} Guide`,
       content: assembledContent,
+      contentBlocks: draft.generatedContent?.contentBlocks || [], // Pass content blocks for Elementor
       metaTitle: draft.selectedMetaTitle || draft.metaTitle,
       metaDescription: draft.selectedMetaDescription || draft.metaDescription,
       focusKeyword: draft.selectedKeyword,
       featuredImage: featuredImageUrl ? { url: featuredImageUrl, altText: 'Featured image' } : null
     };
 
-    console.log(`🚀 Deploying to WordPress with ${draftData.content.length} chars of content`);
-    console.log(`🏢 Company ID: ${draft.blogId.companyId._id}`);
-    console.log(`🏢 Company Name: ${draft.blogId.companyId.name}`);
-    console.log(`🔧 WordPress Config Present: ${!!draft.blogId.companyId.wordpressConfig}`);
+    console.log(`🚀 DEPLOYING TO WORDPRESS WITH COMPLETE SEO + ELEMENTOR INTEGRATION:`);
+    console.log(`📝 H1 → WordPress Title: "${draftData.title}"`);
+    console.log(`🎯 Meta Title → RankMath: "${draftData.metaTitle}"`);
+    console.log(`📄 Meta Description → RankMath: "${draftData.metaDescription}"`);
+    console.log(`🔍 Focus Keyword → RankMath: "${draftData.focusKeyword}"`);
+    console.log(`🎨 Content Blocks → Elementor: ${draftData.contentBlocks?.length || 0} blocks`);
+    console.log(`📊 Content Length: ${draftData.content.length} chars`);
+    console.log(`🏢 Company: ${draft.blogId.companyId.name} (ID: ${draft.blogId.companyId._id})`);
+    console.log(`🔧 WordPress Config: ${!!draft.blogId.companyId.wordpressConfig ? 'Ready' : 'Missing'}`);
 
     // Test connection first
     const connectionTest = await wordpressService.testConnection(draft.blogId.companyId._id);

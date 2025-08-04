@@ -33,6 +33,8 @@ Company Context:
 - Objective: ${keyword.objective}
 ${trendingContext}
 
+IMPORTANT: Use REAL company information. Do NOT use placeholder text like [Company Name], [Number], or brackets. Reference ${companyInfo.companyName} specifically and their actual services: ${companyInfo.servicesOffered || 'solar services'}.
+
 Generate the following in JSON format with RankMath SEO requirements:
 {
   "h1": "Main H1 heading (50-60 characters, MUST start with focus keyword '${keyword.focusKeyword}')",
@@ -59,9 +61,12 @@ Example format:
   "metaDescription": "Learn how to install solar panels with our comprehensive guide. Expert tips, costs, and benefits from WattMonk's solar professionals."
 }`;
 
-      const response = await geminiService.generateContent(prompt, { 
+      const response = await geminiService.generateContent(prompt, {
         keyword: keyword.focusKeyword,
-        company: companyInfo.companyName 
+        name: companyInfo.companyName,
+        servicesOffered: companyInfo.servicesOffered || 'Solar services',
+        serviceOverview: companyInfo.serviceOverview || 'Professional solar solutions',
+        brandVoice: 'Professional, authoritative, helpful'
       });
 
       // Try to parse JSON from the response

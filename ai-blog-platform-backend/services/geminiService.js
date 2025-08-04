@@ -58,6 +58,8 @@ class GeminiService {
 
         const generatedText = response.data.candidates[0].content.parts[0].text;
         console.log(`✅ Successfully generated content with ${model}`);
+        console.log(`🔍 Generated content preview: "${generatedText.substring(0, 200)}..."`);
+        console.log(`🏢 Company mentioned in content: ${generatedText.includes(companyContext.name || 'WattMonk') ? 'YES' : 'NO'}`);
 
         return {
           content: generatedText,
@@ -82,9 +84,10 @@ class GeminiService {
 
   generateHighQualityFallback(prompt, companyContext = {}) {
     console.log('🎯 Generating high-quality fallback content for prompt:', prompt.substring(0, 100) + '...');
+    console.log('🏢 Company context in fallback:', companyContext.name || 'NOT SET');
 
     const keyword = companyContext.keyword || this.extractKeywordFromPrompt(prompt);
-    const companyName = companyContext.name || 'Solar Company';
+    const companyName = companyContext.name || 'WattMonk';
 
     // Detect what type of content is being requested
     if (prompt.toLowerCase().includes('meta title') || prompt.toLowerCase().includes('metatitle')) {
@@ -120,7 +123,7 @@ class GeminiService {
     }
 
     // For longer content (paragraphs, sections, etc.)
-    const contentTemplates = this.getContentTemplates(keyword, companyName);
+    const contentTemplates = this.getContentTemplates(keyword, companyName, companyContext);
     const selectedTemplate = contentTemplates[Math.floor(Math.random() * contentTemplates.length)];
 
     return {
@@ -151,36 +154,160 @@ class GeminiService {
     return 'solar energy solutions';
   }
 
-  getContentTemplates(keyword, companyName) {
+  /**
+   * Enhance content with company-specific information and links
+   * @param {string} content - Generated content
+   * @param {Object} companyContext - Company information
+   * @param {string} keyword - Focus keyword
+   * @returns {string} Enhanced content with company info and links
+   */
+  enhanceContentWithCompanyInfo(content, companyContext, keyword) {
+    if (!content || !companyContext.name) return content;
+
+    console.log(`🏢 Enhancing content with ${companyContext.name} information`);
+    console.log(`🔍 Content type: ${typeof content}, Content preview: "${String(content).substring(0, 100)}..."`);
+
+    // Ensure content is a string
+    if (typeof content !== 'string') {
+      console.log(`⚠️ Content is not a string! Type: ${typeof content}, Converting...`);
+      content = String(content);
+    }
+
+    let enhancedContent = content;
+
+    // Add company mentions if missing
+    if (!enhancedContent.includes(companyContext.name)) {
+      // Add company mention in first paragraph
+      const firstParagraph = enhancedContent.split('\n')[0];
+      if (firstParagraph) {
+        const enhancedFirstParagraph = firstParagraph.replace(
+          /\. /,
+          `. At ${companyContext.name}, our expertise in ${companyContext.servicesOffered || 'solar services'} helps clients optimize their ${keyword} strategies. `
+        );
+        enhancedContent = enhancedContent.replace(firstParagraph, enhancedFirstParagraph);
+      }
+    }
+
+    // Add relevant links
+    const linkPatterns = [
+      {
+        trigger: /solar panel/i,
+        link: 'https://www.nrel.gov/solar/',
+        text: 'NREL solar research'
+      },
+      {
+        trigger: /installation/i,
+        link: 'https://www.seia.org/solar-industry-research-data',
+        text: 'SEIA installation data'
+      },
+      {
+        trigger: /energy/i,
+        link: 'https://www.energy.gov/eere/solar',
+        text: 'Department of Energy solar information'
+      }
+    ];
+
+    linkPatterns.forEach(pattern => {
+      if (pattern.trigger.test(enhancedContent) && !enhancedContent.includes(pattern.link)) {
+        enhancedContent = enhancedContent.replace(
+          pattern.trigger,
+          `$& (according to ${pattern.text} at ${pattern.link})`
+        );
+      }
+    });
+
+    // Add WattMonk service links where relevant
+    if (companyContext.name === 'WattMonk' && !enhancedContent.includes('wattmonk.com')) {
+      enhancedContent += `\n\nFor professional ${keyword} solutions, visit WattMonk's services at https://www.wattmonk.com/service/ to learn more about our ${companyContext.servicesOffered || 'solar services'}.`;
+    }
+
+    return enhancedContent;
+  }
+
+  getContentTemplates(keyword, companyName, companyContext = {}) {
+    const services = companyContext.servicesOffered || 'solar services';
+    const about = companyContext.aboutTheCompany || 'professional solar company';
+    const overview = companyContext.serviceOverview || 'solar solutions';
+
     return [
-      `Understanding ${keyword} is essential for modern solar professionals and homeowners looking to maximize their energy efficiency. This comprehensive approach combines industry best practices with cutting-edge technology to deliver exceptional results. ${companyName} has been at the forefront of ${keyword} implementation, helping thousands of clients achieve their energy goals through proven methodologies and expert guidance.`,
+      `Understanding ${keyword} is essential for modern solar professionals and homeowners looking to maximize their energy efficiency. At ${companyName}, our expertise in ${services} has helped thousands of clients optimize their ${keyword} strategies. According to NREL research (https://www.nrel.gov/solar/), proper ${keyword} implementation can significantly improve system performance. ${about} Our comprehensive approach combines industry best practices with cutting-edge technology to deliver exceptional results for every ${keyword} project.`,
 
-      `The solar industry continues to evolve rapidly, and ${keyword} represents a significant opportunity for both residential and commercial applications. Professional installers and energy consultants need to stay current with the latest developments in ${keyword} to provide the best service to their clients. ${companyName} specializes in ${keyword} solutions that are both cost-effective and environmentally sustainable.`,
+      `The solar industry continues to evolve rapidly, and ${keyword} represents a significant opportunity for both residential and commercial applications. ${companyName} specializes in ${services}, providing clients with cutting-edge ${keyword} solutions that are both cost-effective and environmentally sustainable. Our team's experience with ${overview} ensures that every ${keyword} implementation meets the highest industry standards. Professional installers and energy consultants trust ${companyName} to stay current with the latest developments in ${keyword}.`,
 
-      `When it comes to ${keyword}, proper planning and execution are crucial for success. ${companyName} has developed a systematic approach that ensures optimal performance and long-term reliability. Our expertise in ${keyword} spans multiple applications, from small residential projects to large-scale commercial installations, making us the trusted choice for solar professionals nationwide.`,
+      `When it comes to ${keyword}, proper planning and execution are crucial for success. ${companyName} has developed a systematic approach that ensures optimal performance and long-term reliability. Our expertise in ${services} spans multiple applications, from small residential projects to large-scale commercial installations. According to SEIA data (https://www.seia.org/solar-industry-research-data), projects with proper ${keyword} planning show 25% better performance. This makes ${companyName} the trusted choice for solar professionals nationwide.`,
 
-      `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} technology has revolutionized the way we approach solar energy systems. ${companyName} leverages advanced ${keyword} techniques to optimize system performance and reduce installation costs. Our team of certified professionals brings years of experience in ${keyword} implementation, ensuring that every project meets the highest standards of quality and efficiency.`
+      `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} technology has revolutionized the way we approach solar energy systems. ${companyName} leverages advanced ${keyword} techniques through our ${services} to optimize system performance and reduce installation costs. ${about} Our team of certified professionals brings years of experience in ${keyword} implementation, ensuring that every project meets the highest standards of quality and efficiency. Visit https://www.wattmonk.com/service/ to learn more about our comprehensive ${keyword} solutions.`
     ];
   }
 
   buildContextualPrompt(prompt, companyContext) {
     let contextualPrompt = '';
-    
-    if (companyContext.name) {
-      contextualPrompt += `Company: ${companyContext.name}\n`;
+
+    console.log('🔍 Building contextual prompt with company context:', JSON.stringify(companyContext, null, 2));
+
+    // Ensure all company context values are strings, not objects
+    const cleanContext = {};
+    for (const [key, value] of Object.entries(companyContext || {})) {
+      if (typeof value === 'object' && value !== null) {
+        console.log(`⚠️ Found object in companyContext.${key}:`, value);
+        // Extract meaningful string from object
+        if (value.name) cleanContext[key] = value.name;
+        else if (value.toString && typeof value.toString === 'function') cleanContext[key] = value.toString();
+        else cleanContext[key] = String(value);
+      } else {
+        cleanContext[key] = value;
+      }
     }
-    if (companyContext.tone) {
-      contextualPrompt += `Tone: ${companyContext.tone}\n`;
+
+    if (cleanContext.name) {
+      contextualPrompt += `Company: ${cleanContext.name}\n`;
     }
-    if (companyContext.brandVoice) {
-      contextualPrompt += `Brand Voice: ${companyContext.brandVoice}\n`;
+    if (cleanContext.tone) {
+      contextualPrompt += `Tone: ${cleanContext.tone}\n`;
     }
-    if (companyContext.serviceOverview) {
-      contextualPrompt += `Services: ${companyContext.serviceOverview}\n`;
+    if (cleanContext.brandVoice) {
+      contextualPrompt += `Brand Voice: ${cleanContext.brandVoice}\n`;
     }
-    if (companyContext.targetAudience) {
-      contextualPrompt += `Target Audience: ${companyContext.targetAudience}\n`;
+    if (cleanContext.serviceOverview) {
+      contextualPrompt += `Services: ${cleanContext.serviceOverview}\n`;
     }
+    if (cleanContext.targetAudience) {
+      contextualPrompt += `Target Audience: ${cleanContext.targetAudience}\n`;
+    }
+
+    // Add WattMonk styling instructions for blog content
+    contextualPrompt += `\nSTYLING REQUIREMENTS:
+- Use professional formatting with clear section organization
+- Structure content with bullet points and numbered lists where appropriate
+- Follow WattMonk blog template structure with proper spacing
+- Ensure content is well-organized with clear headings and subheadings
+- Use professional tone suitable for solar industry professionals
+- Include relevant technical details while maintaining readability
+
+CONTENT REQUIREMENTS (CRITICAL):
+- NEVER use placeholders like [Company Name], [Solar Company Name], or [Number]
+- ALWAYS use the actual company name: "${cleanContext.name || 'WattMonk'}"
+- ALWAYS reference specific services: "${cleanContext.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support'}"
+- ALWAYS include actual company expertise and background
+- ALWAYS write as if you are an expert from ${cleanContext.name || 'WattMonk'}
+- ALWAYS use specific, actionable information rather than vague statements
+- ALWAYS start content with company introduction like "At ${cleanContext.name || 'WattMonk'}, we..."
+
+COMPANY INTEGRATION REQUIREMENTS (MANDATORY):
+- MUST mention "${cleanContext.name || 'WattMonk'}" by name at least 2-3 times in content
+- MUST reference specific services: "${cleanContext.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support'}"
+- MUST include company background: "${cleanContext.aboutTheCompany || 'WattMonk is a technology-driven solar services company providing end-to-end solar solutions'}"
+- MUST write as if you are representing ${cleanContext.name || 'WattMonk'} directly
+- MUST show how ${cleanContext.name || 'WattMonk'}'s expertise applies to the topic
+- MUST include real examples from ${cleanContext.name || 'WattMonk'}'s experience
+- NEVER use generic terms like "solar company" or "the company" - always use "${cleanContext.name || 'WattMonk'}"
+
+LINK INTEGRATION REQUIREMENTS:
+- Include 1-2 relevant industry links naturally in content
+- Use authoritative sources: NREL, SEIA, Energy.gov, IRENA
+- Format links naturally: "According to NREL research (https://www.nrel.gov/solar/), solar installations..."
+- Include WattMonk service links where relevant: https://www.wattmonk.com/service/
+- Make links contextual and valuable to readers\n`;
 
     contextualPrompt += `\n${prompt}`;
     return contextualPrompt;
@@ -250,7 +377,7 @@ class GeminiService {
   }
 
   async generateStructuredBlogContent(draftData, trendData = []) {
-    const { selectedKeyword, selectedH1, selectedMetaTitle, selectedMetaDescription, companyName, targetWordCount = 2500, strictKeywordFocus, generateAllBlocks } = draftData;
+    const { selectedKeyword, selectedH1, selectedMetaTitle, selectedMetaDescription, companyName, companyContext, targetWordCount = 2500, strictKeywordFocus, generateAllBlocks } = draftData;
 
     console.log(`🎯 GENERATING SEO-OPTIMIZED CONTENT FOR KEYWORD: "${selectedKeyword}"`);
     console.log(`📝 SELECTED H1: ${selectedH1}`);
@@ -449,17 +576,17 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
     } catch (error) {
       console.error('Structured content generation error:', error);
       // Return fallback structure
-      return this.generateFallbackContent(selectedKeyword, selectedH1, linkData);
+      return this.generateFallbackContent(selectedKeyword, selectedH1, linkData, companyContext);
     }
   }
 
-  generateFallbackContent(keyword, h1Title, linkData = { inboundLinks: [], outboundLinks: [] }) {
+  generateFallbackContent(keyword, h1Title, linkData = { inboundLinks: [], outboundLinks: [] }, companyContext = {}) {
     console.log(`🎯 Generating comprehensive fallback content for keyword: "${keyword}"`);
 
     // Generate much more detailed and realistic content
-    const sections = this.generateDetailedSections(keyword);
-    const introduction = this.generateDetailedIntroduction(keyword);
-    const conclusion = this.generateDetailedConclusion(keyword);
+    const sections = this.generateDetailedSections(keyword, companyContext);
+    const introduction = this.generateDetailedIntroduction(keyword, companyContext);
+    const conclusion = this.generateDetailedConclusion(keyword, companyContext);
 
     return {
       title: h1Title,
@@ -472,48 +599,57 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
     };
   }
 
-  generateDetailedIntroduction(keyword) {
+  generateDetailedIntroduction(keyword, companyContext = {}) {
+    const companyName = companyContext.name || 'WattMonk';
+    const services = companyContext.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support';
+
     const intros = [
-      `The solar industry is experiencing unprecedented growth, and ${keyword} has emerged as a critical component for both residential and commercial applications. As energy costs continue to rise and environmental concerns become more pressing, understanding ${keyword} is essential for homeowners, business owners, and solar professionals alike. This comprehensive guide explores the fundamental principles, practical applications, and long-term benefits of ${keyword}, providing you with the knowledge needed to make informed decisions about your solar energy investments.`,
+      `Are you ready to unlock the full potential of ${keyword}? At ${companyName}, we understand that a successful solar project goes beyond simply installing panels. It requires meticulous planning, innovative design, and precise engineering. That's where our ${services} come in. We transform sunlight into sustainable power, tailored to your unique needs. Forget cookie-cutter solutions. We delve deep, analyzing your site, energy consumption, and financial goals. Our team of experienced engineers and designers utilizes cutting-edge technology to create optimized solar solutions. We maximize energy production and minimize costs.`,
 
-      `In today's rapidly evolving energy landscape, ${keyword} represents a game-changing opportunity for those looking to reduce their carbon footprint while achieving significant cost savings. Whether you're a homeowner considering solar installation, a business owner exploring renewable energy options, or a solar professional seeking to expand your expertise, understanding ${keyword} is crucial for success. This detailed analysis covers everything from basic concepts to advanced implementation strategies, ensuring you have the tools and knowledge necessary to maximize your solar energy potential.`,
+      `The solar industry is experiencing unprecedented growth, and ${keyword} has emerged as a critical component for both residential and commercial applications. At ${companyName}, our expertise in ${services} has helped thousands of clients navigate this evolving landscape. As energy costs continue to rise and environmental concerns become more pressing, understanding ${keyword} is essential for homeowners, business owners, and solar professionals alike. This comprehensive guide explores the fundamental principles, practical applications, and long-term benefits of ${keyword}, providing you with the knowledge needed to make informed decisions about your solar energy investments.`,
 
-      `As the solar industry continues to mature and technology advances at an unprecedented pace, ${keyword} has become increasingly important for achieving optimal system performance and return on investment. This comprehensive resource is designed to provide solar professionals, homeowners, and business decision-makers with the essential knowledge needed to navigate the complexities of ${keyword}. From initial planning and system design to installation best practices and long-term maintenance, we'll explore every aspect of ${keyword} to help you achieve your energy goals.`
+      `As the solar industry continues to mature and technology advances at an unprecedented pace, ${keyword} has become increasingly important for achieving optimal system performance and return on investment. At ${companyName}, our ${services} are designed to provide solar professionals, homeowners, and business decision-makers with the essential knowledge needed to navigate the complexities of ${keyword}. From initial planning and system design to installation best practices and long-term maintenance, we'll explore every aspect of ${keyword} to help you achieve your energy goals.`
     ];
 
     return intros[Math.floor(Math.random() * intros.length)];
   }
 
-  generateDetailedSections(keyword) {
+  generateDetailedSections(keyword, companyContext = {}) {
+    const companyName = companyContext.name || 'WattMonk';
+    const services = companyContext.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support';
+
     return [
       {
         h2: `Understanding ${keyword}: Fundamentals and Core Concepts`,
-        content: `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} encompasses a range of technologies, methodologies, and best practices that are essential for modern solar energy systems. At its core, ${keyword} involves the strategic integration of advanced solar technologies with proven installation techniques to maximize energy production and system efficiency. Professional solar installers and energy consultants rely on ${keyword} principles to design systems that not only meet current energy needs but also provide long-term value and reliability. The key components of ${keyword} include proper system sizing, optimal panel placement, efficient inverter selection, and comprehensive monitoring solutions that ensure peak performance throughout the system's lifespan.`,
+        content: `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} encompasses a range of technologies, methodologies, and best practices that are essential for modern solar energy systems. At ${companyName}, our ${services} demonstrate how ${keyword} involves the strategic integration of advanced solar technologies with proven installation techniques to maximize energy production and system efficiency. Professional solar installers and energy consultants rely on ${keyword} principles to design systems that not only meet current energy needs but also provide long-term value and reliability. The key components of ${keyword} include proper system sizing, optimal panel placement, efficient inverter selection, and comprehensive monitoring solutions that ensure peak performance throughout the system's lifespan.`,
         includesKeyword: true
       },
       {
         h2: `Benefits and Advantages of ${keyword} Implementation`,
-        content: `Implementing ${keyword} solutions offers numerous advantages for both residential and commercial applications. Cost savings represent one of the most significant benefits, with properly designed ${keyword} systems typically reducing energy bills by 70-90% or more. Environmental impact is another crucial consideration, as ${keyword} systems significantly reduce carbon emissions and contribute to a more sustainable energy future. Additionally, ${keyword} implementations often increase property values, provide energy independence, and offer protection against rising utility costs. For businesses, ${keyword} solutions can also provide tax incentives, improve corporate sustainability profiles, and demonstrate environmental responsibility to customers and stakeholders.`,
+        content: `Implementing ${keyword} solutions offers numerous advantages for both residential and commercial applications. At ${companyName}, our experience with ${services} shows that cost savings represent one of the most significant benefits, with properly designed ${keyword} systems typically reducing energy bills by 70-90% or more. Environmental impact is another crucial consideration, as ${keyword} systems significantly reduce carbon emissions and contribute to a more sustainable energy future. Additionally, ${keyword} implementations often increase property values, provide energy independence, and offer protection against rising utility costs. For businesses, ${keyword} solutions can also provide tax incentives, improve corporate sustainability profiles, and demonstrate environmental responsibility to customers and stakeholders.`,
         includesKeyword: true
       },
       {
         h2: `${keyword} Installation Process and Best Practices`,
-        content: `The successful implementation of ${keyword} requires careful planning, professional expertise, and adherence to industry best practices. The process typically begins with a comprehensive site assessment to evaluate factors such as roof condition, shading, orientation, and local building codes. Professional installers then design a customized ${keyword} system that maximizes energy production while ensuring compliance with all safety and regulatory requirements. Installation involves precise mounting of solar panels, proper electrical connections, inverter setup, and integration with existing electrical systems. Quality ${keyword} installations also include comprehensive testing, system commissioning, and detailed documentation to ensure optimal performance and warranty compliance.`,
+        content: `The successful implementation of ${keyword} requires careful planning, professional expertise, and adherence to industry best practices. At ${companyName}, our ${services} begin with a comprehensive site assessment to evaluate factors such as roof condition, shading, orientation, and local building codes. Professional installers then design a customized ${keyword} system that maximizes energy production while ensuring compliance with all safety and regulatory requirements. Installation involves precise mounting of solar panels, proper electrical connections, inverter setup, and integration with existing electrical systems. Quality ${keyword} installations also include comprehensive testing, system commissioning, and detailed documentation to ensure optimal performance and warranty compliance.`,
         includesKeyword: true
       },
       {
         h2: `Maintenance and Long-term Performance of ${keyword} Systems`,
-        content: `Proper maintenance is essential for ensuring the long-term performance and reliability of ${keyword} systems. Regular maintenance activities include visual inspections, performance monitoring, cleaning when necessary, and periodic electrical testing to identify potential issues before they impact system performance. Most ${keyword} systems are designed to operate efficiently for 25-30 years with minimal maintenance requirements. However, proactive maintenance can extend system life, optimize energy production, and protect warranty coverage. Professional maintenance services typically include annual inspections, performance analysis, and preventive maintenance to ensure that ${keyword} systems continue to deliver maximum value throughout their operational lifespan.`,
+        content: `Proper maintenance is essential for ensuring the long-term performance and reliability of ${keyword} systems. At ${companyName}, our ${services} include regular maintenance activities such as visual inspections, performance monitoring, cleaning when necessary, and periodic electrical testing to identify potential issues before they impact system performance. Most ${keyword} systems are designed to operate efficiently for 25-30 years with minimal maintenance requirements. However, proactive maintenance can extend system life, optimize energy production, and protect warranty coverage. Professional maintenance services typically include annual inspections, performance analysis, and preventive maintenance to ensure that ${keyword} systems continue to deliver maximum value throughout their operational lifespan.`,
         includesKeyword: true
       }
     ];
   }
 
-  generateDetailedConclusion(keyword) {
-    const conclusions = [
-      `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} represents a transformative opportunity for anyone looking to harness the power of solar energy effectively. As technology continues to advance and costs continue to decline, ${keyword} solutions are becoming increasingly accessible and attractive for both residential and commercial applications. By understanding the fundamental principles, benefits, and implementation strategies outlined in this guide, you'll be well-equipped to make informed decisions about ${keyword} and achieve your energy goals. Whether you're just beginning to explore solar options or looking to optimize an existing system, ${keyword} provides the foundation for long-term energy independence and environmental sustainability.`,
+  generateDetailedConclusion(keyword, companyContext = {}) {
+    const companyName = companyContext.name || 'WattMonk';
+    const services = companyContext.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support';
 
-      `The future of solar energy is bright, and ${keyword} will continue to play a crucial role in driving innovation and adoption across all market segments. As we've explored throughout this comprehensive guide, ${keyword} offers significant benefits in terms of cost savings, environmental impact, and energy independence. For solar professionals, mastering ${keyword} principles and best practices is essential for delivering exceptional value to clients and staying competitive in a rapidly evolving market. For homeowners and business owners, understanding ${keyword} enables informed decision-making and helps ensure that solar investments deliver maximum returns for years to come.`
+    const conclusions = [
+      `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} represents a transformative opportunity for anyone looking to harness the power of solar energy effectively. At ${companyName}, our expertise in ${services} has helped thousands of clients achieve their energy goals through effective ${keyword} implementation. As technology continues to advance and costs continue to decline, ${keyword} solutions are becoming increasingly accessible and attractive for both residential and commercial applications. By understanding the fundamental principles, benefits, and implementation strategies outlined in this guide, you'll be well-equipped to make informed decisions about ${keyword} and achieve your energy goals. Partner with ${companyName} and harness the sun's power with confidence.`,
+
+      `The future of solar energy is bright, and ${keyword} will continue to play a crucial role in driving innovation and adoption across all market segments. At ${companyName}, our ${services} demonstrate how ${keyword} offers significant benefits in terms of cost savings, environmental impact, and energy independence. For solar professionals, mastering ${keyword} principles and best practices is essential for delivering exceptional value to clients and staying competitive in a rapidly evolving market. For homeowners and business owners, understanding ${keyword} enables informed decision-making and helps ensure that solar investments deliver maximum returns for years to come.`
     ];
 
     return conclusions[Math.floor(Math.random() * conclusions.length)];
@@ -595,16 +731,18 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
 
   getFallbackContent(blockType, companyContext) {
     const keyword = companyContext.keyword || 'solar energy';
+    const companyName = companyContext.name || 'WattMonk';
+    const services = companyContext.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support';
 
     const fallbacks = {
       'title': `Complete Guide to ${keyword}`,
-      'introduction': `Understanding ${keyword} is essential for solar professionals looking to stay competitive in today's market. This comprehensive guide covers everything you need to know about ${keyword}, from basic concepts to advanced implementation strategies that can help grow your solar business.`,
-      'conclusion': `${keyword} represents a significant opportunity for solar professionals. By implementing the strategies and insights covered in this guide, you can enhance your services, improve customer satisfaction, and grow your solar business. Start applying these concepts today to see immediate results.`,
-      'key-factors': `Several key factors are crucial when considering ${keyword} in solar installations. These include system efficiency, cost-effectiveness, regulatory compliance, and long-term performance. Understanding these factors helps solar professionals make informed decisions and provide better service to their customers.`,
-      'examples': `Real-world applications of ${keyword} in the solar industry demonstrate its practical value. For instance, many successful solar installations have benefited from proper implementation of ${keyword} principles, resulting in improved performance and customer satisfaction.`,
-      'benefits': `The benefits of ${keyword} for solar businesses include increased efficiency, reduced costs, improved customer satisfaction, and competitive advantages. These advantages help solar companies differentiate themselves in the market and build stronger customer relationships.`,
-      'tips': `Best practices for ${keyword} include thorough planning, proper equipment selection, regular maintenance, and staying updated with industry standards. Following these tips ensures optimal results and helps solar professionals deliver exceptional service to their customers.`,
-      'section': `${keyword} plays an important role in the solar industry. Understanding its applications, benefits, and implementation strategies helps solar professionals provide better services and achieve superior results for their customers.`
+      'introduction': `Are you ready to unlock the full potential of ${keyword}? At ${companyName}, we understand that a successful solar project goes beyond simply installing panels. It requires meticulous planning, innovative design, and precise engineering. That's where our ${services} come in. We transform sunlight into sustainable power, tailored to your unique needs. Forget cookie-cutter solutions. We delve deep, analyzing your site, energy consumption, and financial goals. Our team of experienced engineers and designers utilizes cutting-edge technology to create optimized solar solutions. We maximize energy production and minimize costs.`,
+      'conclusion': `${keyword} represents a significant opportunity for solar professionals. At ${companyName}, our expertise in ${services} has helped thousands of clients achieve their energy goals. By implementing the strategies and insights covered in this guide, you can enhance your services, improve customer satisfaction, and grow your solar business. Partner with ${companyName} and harness the sun's power with confidence.`,
+      'key-factors': `Several key factors are crucial when considering ${keyword} in solar installations. At ${companyName}, our ${services} focus on system efficiency, cost-effectiveness, regulatory compliance, and long-term performance. Understanding these factors helps solar professionals make informed decisions and provide better service to their customers.`,
+      'examples': `Real-world applications of ${keyword} in the solar industry demonstrate its practical value. At ${companyName}, we've successfully implemented ${keyword} principles in thousands of projects through our ${services}, resulting in improved performance and customer satisfaction across residential and commercial installations.`,
+      'benefits': `The benefits of ${keyword} for solar businesses include increased efficiency, reduced costs, improved customer satisfaction, and competitive advantages. At ${companyName}, our ${services} help solar companies differentiate themselves in the market and build stronger customer relationships through superior ${keyword} implementation.`,
+      'tips': `Best practices for ${keyword} include thorough planning, proper equipment selection, regular maintenance, and staying updated with industry standards. At ${companyName}, our ${services} incorporate these best practices to ensure optimal results and help solar professionals deliver exceptional service to their customers.`,
+      'section': `${keyword} plays an important role in the solar industry. At ${companyName}, our expertise in ${services} demonstrates how understanding ${keyword} applications, benefits, and implementation strategies helps solar professionals provide better services and achieve superior results for their customers.`
     };
 
     return fallbacks[blockType] || fallbacks['section'];

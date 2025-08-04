@@ -466,6 +466,7 @@ class BlogController {
     const wordpressData = {
       title: draft.title,                                    // SEO-optimized H1 from our service
       content: draft.content,
+      contentBlocks: draft.generatedContent?.contentBlocks || [], // Pass content blocks for Elementor
       metaTitle: draft.metaTitle || draft.title,            // SEO-optimized meta title
       metaDescription: draft.metaDescription || draft.excerpt || '', // SEO-optimized meta description
       focusKeyword: draft.selectedKeyword || '',            // Focus keyword for RankMath scoring
@@ -638,6 +639,7 @@ class BlogController {
     const wordpressData = {
       title: draft.title,                                    // SEO-optimized H1
       content: draft.content,
+      contentBlocks: draft.generatedContent?.contentBlocks || [], // Pass content blocks for Elementor
       metaTitle: draft.metaTitle || draft.title,            // SEO-optimized meta title
       metaDescription: draft.metaDescription || draft.excerpt || '', // SEO-optimized meta description
       focusKeyword: draft.selectedKeyword || '',            // Focus keyword for RankMath
