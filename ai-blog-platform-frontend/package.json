@@ -1,12 +1,14 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "ai-blog-platform-frontend",
+  "version": "1.0.0",
+  "description": "AI Blog Platform Frontend - Next.js application",
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "next dev --port 3001",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start --port 3001",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

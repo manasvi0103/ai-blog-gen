@@ -12,8 +12,6 @@
     "sync-sheets": "node scripts/syncGoogleSheets.js",
     "test:watch": "jest --watch",
     "cleanup": "node scripts/cleanupDatabase.js",
-    "test-db": "node scripts/testConnection.js",
-    "test-apis": "node scripts/testAPIs.js",
     "quick-start": "node scripts/quickStart.js",
     "setup-n8n": "node scripts/setupN8N.js",
     "test-n8n": "node scripts/setupN8N.js test-webhook",

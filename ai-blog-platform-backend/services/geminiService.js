@@ -373,15 +373,15 @@ ${about} Our team of certified professionals brings years of experience in ${key
 
 ## Why Choose ${companyName}?
 
-- ✅ **Industry Expertise** - Over `1000+` successful installations
+- ✅ **Industry Expertise** - Over 1000+ successful installations
 - ✅ **Advanced Technology** - Latest tools and software for optimal design
 - ✅ **Quality Assurance** - Rigorous testing and validation processes
 - ✅ **Customer Support** - Dedicated team for ongoing assistance
 
 ### Technical Specifications:
-- **System Efficiency**: Up to `22%` module efficiency
-- **Warranty Coverage**: `25-year` performance guarantee
-- **Installation Time**: Typically `1-3 days` for residential projects
+- **System Efficiency**: Up to 22% module efficiency
+- **Warranty Coverage**: 25-year performance guarantee
+- **Installation Time**: Typically 1-3 days for residential projects
 
 Visit [WattMonk Services](https://www.wattmonk.com/service/) to learn more about our comprehensive ${keyword} solutions and how we can help optimize your solar project.`
     ];
@@ -469,7 +469,7 @@ MARKDOWN FORMATTING REQUIREMENTS (CRITICAL FOR READABILITY):
 - Format numbered lists with proper markdown (1. 2. 3.) for processes and steps
 - Use tables with proper markdown formatting when presenting data or comparisons
 - Use > blockquotes for important quotes, statistics, or key insights
-- Use `code formatting` for technical specifications, measurements, and numbers
+- Use code formatting for technical specifications, measurements, and numbers
 - Use [link text](URL) format for all external links
 - Ensure proper line breaks and spacing between sections (double line breaks)
 - Use horizontal rules (---) to separate major sections when appropriate
@@ -484,7 +484,7 @@ CONTENT FORMATTING EXAMPLES (FOLLOW THESE PATTERNS):
 - Tables for data: | Feature | Benefit | Impact |
 - Blockquotes for stats: > "Projects show 25% better performance with proper planning"
 - Lists with checkmarks: ✅ **Industry Expertise** - Over 1000+ installations
-- Code for specs: System efficiency up to \`22%\` module efficiency
+- Code for specs: System efficiency up to 22% module efficiency
 - Proper links: [NREL research](https://www.nrel.gov/solar/)
 - Line spacing: Use double line breaks between sections for readability
 
