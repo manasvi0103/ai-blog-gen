@@ -112,20 +112,37 @@ export default function EditorPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasUnsavedChanges])
 
-  const loadMetaData = () => {
-    const savedMeta = localStorage.getItem(`meta_${draftId}`)
-    if (savedMeta) {
-      const parsedMeta = JSON.parse(savedMeta)
-      setMetaData(parsedMeta)
-      setSelectedMeta(parsedMeta)
-      console.log('📋 Loaded selected meta data:', parsedMeta)
-    }
+  const loadMetaData = async () => {
+    try {
+      // First try localStorage
+      const savedMeta = localStorage.getItem(`meta_${draftId}`)
+      if (savedMeta) {
+        const parsedMeta = JSON.parse(savedMeta)
+        setMetaData(parsedMeta)
+        setSelectedMeta(parsedMeta)
+        console.log('📋 Loaded selected meta data from localStorage:', parsedMeta)
+      } else {
+        // Fallback: try to get from draft API
+        const draft = await api.getDraft(draftId)
+        if (draft && (draft.title || draft.metaTitle || draft.metaDescription)) {
+          const metaFromDraft = {
+            h1Title: draft.title || '',
+            metaTitle: draft.metaTitle || '',
+            metaDescription: draft.metaDescription || ''
+          }
+          setMetaData(metaFromDraft)
+          console.log('📋 Loaded meta data from draft API:', metaFromDraft)
+        }
+      }
 
-    // Load selected keyword
-    const savedKeyword = localStorage.getItem(`keyword_${draftId}`)
-    if (savedKeyword) {
-      setSelectedKeyword(savedKeyword)
-      console.log('🎯 Loaded selected keyword:', savedKeyword)
+      // Load selected keyword
+      const savedKeyword = localStorage.getItem(`keyword_${draftId}`)
+      if (savedKeyword) {
+        setSelectedKeyword(savedKeyword)
+        console.log('🎯 Loaded selected keyword:', savedKeyword)
+      }
+    } catch (error) {
+      console.error('Error loading meta data:', error)
     }
   }
 
@@ -700,6 +717,40 @@ export default function EditorPage() {
         {/* WordPress-style editor container */}
         <div className="bg-white min-h-screen">
 
+
+          {/* SEO Meta Information Section */}
+          {metaData && (
+            <div className="bg-white border border-gray-300 mx-6 rounded-lg shadow-sm mb-6">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  SEO Meta Information
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">H1 Title</label>
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                      <p className="text-gray-900 font-medium">{metaData.h1Title}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Meta Title</label>
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                      <p className="text-gray-900">{metaData.metaTitle}</p>
+                      <p className="text-xs text-gray-500 mt-1">{metaData.metaTitle.length}/60 characters</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Meta Description</label>
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                      <p className="text-gray-900">{metaData.metaDescription}</p>
+                      <p className="text-xs text-gray-500 mt-1">{metaData.metaDescription.length}/160 characters</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* WordPress-style content editor */}
           <div className="bg-white border border-gray-300 mx-6 rounded-lg shadow-sm">

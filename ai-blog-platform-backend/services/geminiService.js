@@ -601,134 +601,89 @@ LINK INTEGRATION REQUIREMENTS:
     console.log(`   Each section: ${sectionWords} words`);
     console.log(`   Conclusion: ${conclusionWords} words`);
 
-    const expertPrompt = `You are an expert solar industry content writer and SEO strategist with 10+ years of experience. You write authoritative, data-driven blogs for leading clean energy companies like ${companyName}, targeting U.S. solar professionals, installers, and decision-makers. Your writing is professional, technically accurate, and based on real industry data and trends.
+    const expertPrompt = `You are a professional solar industry content writer. Write a comprehensive blog article about "${selectedKeyword}" for ${companyName}.
 
-CRITICAL REQUIREMENTS:
-1. EVERYTHING MUST BE ABOUT "${selectedKeyword}" - NO GENERIC CONTENT, NO AI-GENERATED FLUFF
-2. USE REAL INDUSTRY DATA, STATISTICS, AND CURRENT TRENDS
-3. WRITE LIKE A HUMAN EXPERT, NOT AN AI
-4. INCLUDE REAL COMPANY CONTEXT FOR ${companyName}
+CRITICAL INSTRUCTIONS:
+1. RESPOND ONLY WITH VALID JSON - NO EXTRA TEXT, NO EXPLANATIONS, NO "Here is the content"
+2. EXACT WORD COUNT CONTROL: Each section must be EXACTLY the specified word count
+3. WRITE NATURALLY - NO AI-STYLE PHRASES OR ROBOTIC LANGUAGE
+4. FOCUS EXCLUSIVELY ON "${selectedKeyword}" - NO GENERIC SOLAR CONTENT
 
-CONTENT QUALITY STANDARDS:
-Your task is to write a professional, authoritative blog article EXCLUSIVELY about "${selectedKeyword}" that:
-- Provides genuine value to solar professionals working with "${selectedKeyword}"
-- Uses real industry statistics, market data, and technical specifications
-- References current trends and developments in "${selectedKeyword}"
-- Includes practical, actionable insights about "${selectedKeyword}"
-- Demonstrates deep expertise in "${selectedKeyword}" applications
-- Connects to ${companyName}'s actual services and expertise in "${selectedKeyword}"
-- Avoids generic AI content patterns and robotic language
-- Reads like content from a leading solar industry publication
+WORD COUNT REQUIREMENTS (STRICT):
+- Introduction: EXACTLY ${introWords} words
+- Each section: EXACTLY ${sectionWords} words
+- Conclusion: EXACTLY ${conclusionWords} words
+- TOTAL TARGET: ${targetWordCount} words
 
-WRITING GUIDELINES - STRICT "${selectedKeyword}" FOCUS
-- EXACT Title: ${selectedH1}
-- EXACT Meta Title: ${selectedMetaTitle}
-- EXACT Meta Description: ${selectedMetaDescription}
-- PRIMARY KEYWORD (use 20-25 times throughout content): ${selectedKeyword}
-- Structure: H1 + 5x H2 sections about "${selectedKeyword}" (including a conclusion)
-- TARGET TOTAL WORD COUNT: ${targetWordCount} words
-- Each section must be 2–4 paragraphs specifically about "${selectedKeyword}"
-- Every H2 heading must include or relate to "${selectedKeyword}"
-- Use bullet points sparingly, only for "${selectedKeyword}" specific points
-- Tone: Professional expert specifically in "${selectedKeyword}" — no generic solar language
+WRITING STYLE:
+- Write like a human expert, not an AI
+- Use natural, conversational tone
+- Include specific data and examples
+- NO phrases like "Here is...", "Let me explain...", "In this article..."
+- NO AI-style introductions or conclusions
+- Start directly with valuable content about "${selectedKeyword}"
 
-DO NOT USE:
-- "Not just X, it's Y" constructions
-- Metaphors or figurative intros
-- Em dashes for emphasis
-- Redundant phrases like "not only that…" or "in conclusion…"
-- Any markdown formatting (**, ##, ###, -, *, etc.)
-- Bold, italic, or heading markers in content
+CONTENT REQUIREMENTS:
+- Every paragraph must focus on "${selectedKeyword}"
+- Include real industry insights and data
+- Mention ${companyName}'s expertise naturally
+- Use "${selectedKeyword}" 4-5 times per section
+- Write actionable, practical content
 
-REAL LINKS AND REFERENCES REQUIREMENTS:
-- Include REAL, CLICKABLE links from actual industry sources
-- Use the provided trend data and news articles as references
-- Integrate links naturally: "According to recent SEIA data on ${selectedKeyword} (REAL_URL), installations have increased..."
-- Reference actual studies, reports, and news articles about "${selectedKeyword}"
-- Include ${companyName}'s real services and expertise areas
-- NO fake links, NO placeholder URLs, NO generic references
+JSON OUTPUT REQUIREMENTS:
+- RESPOND WITH VALID JSON ONLY
+- NO extra text before or after JSON
+- NO explanations or comments
+- NO "Here is the content" or similar phrases
 
-FORMATTING REQUIREMENTS:
-- Write in clean, plain text only - NO markdown symbols anywhere
-- Remove all ** bold markers, ## heading markers, and other formatting
-- Include 2-3 REAL clickable URLs naturally within each section about "${selectedKeyword}"
-- Use authoritative sources specifically about "${selectedKeyword}":
-  * https://www.energy.gov/eere/solar/solar-energy-technologies-office (for ${selectedKeyword} research)
-  * https://www.seia.org/solar-industry-research-data (for ${selectedKeyword} market data)
-  * https://www.nrel.gov/solar/ (for ${selectedKeyword} technical information)
-  * https://www.irena.org/solar (for global ${selectedKeyword} statistics)
-  * https://www.solarpowerworldonline.com/ (for ${selectedKeyword} industry news)
-- Total of 8-12 URLs about "${selectedKeyword}" embedded throughout the content
-- NO generic solar links - ALL links must relate to "${selectedKeyword}"
+LINKS TO INCLUDE:
+Internal Links: ${linkData.inboundLinks.map(link => `"${link.text}" → ${link.url}`).join(', ')}
+External Links: ${linkData.outboundLinks.map(link => `"${link.text}" → ${link.url}`).join(', ')}
 
-${trendData.length > 0 ? `REAL INDUSTRY TRENDS TO REFERENCE (use these as sources):
-${trendData.map(trend => `- "${trend.title}" from ${trend.source || 'industry source'} (${trend.url || 'URL available'}) - ${trend.summary || trend.description || 'Recent development in ' + selectedKeyword}`).join('\n')}` : ''}
+COMPANY CONTEXT:
+- Position ${companyName} as expert in ${selectedKeyword}
+- Reference ${companyName}'s services naturally
+- Include internal links where relevant
 
-REAL LINKS TO INCORPORATE IN CONTENT:
-Internal Links (${companyName}): ${linkData.inboundLinks.map(link => `"${link.text}" → ${link.url} (${link.context})`).join(', ')}
-External Authority Links: ${linkData.outboundLinks.map(link => `"${link.text}" → ${link.url} (${link.context})`).join(', ')}
-
-COMPANY CONTEXT FOR ${companyName}:
-- Integrate ${companyName}'s expertise in ${selectedKeyword}
-- Reference ${companyName}'s services related to ${selectedKeyword}
-- Position ${companyName} as a trusted authority in ${selectedKeyword}
-- Include relevant internal links to ${companyName}'s ${selectedKeyword} services
-
-Generate a complete blog article about "${selectedKeyword}" with the following structure as JSON:
+RESPOND WITH THIS EXACT JSON STRUCTURE:
 {
   "title": "${selectedH1}",
-  "introduction": "First paragraph MUST START with '${selectedKeyword} is' or '${selectedKeyword} has become' as the very first words. Include compelling insight/stat about ${selectedKeyword} (${introWords} words) - MUST mention '${selectedKeyword}' exactly 4-5 times total",
+  "metaTitle": "${selectedMetaTitle}",
+  "metaDescription": "${selectedMetaDescription}",
+  "introduction": {
+    "content": "Write exactly ${introWords} words about ${selectedKeyword}. Start naturally without AI phrases. Focus on practical value.",
+    "wordCount": ${introWords}
+  },
   "sections": [
     {
-      "h2": "What is ${selectedKeyword}? [or similar ${selectedKeyword} heading]",
-      "content": "2-4 paragraphs explaining ${selectedKeyword} (${sectionWords} words) - MUST mention ${selectedKeyword} 4-5 times",
-      "includesKeyword": true
+      "h2": "Understanding ${selectedKeyword}",
+      "content": "Write exactly ${sectionWords} words explaining ${selectedKeyword}. Include specific details and examples.",
+      "wordCount": ${sectionWords},
+      "keywordCount": 5
     },
     {
-      "h2": "Benefits of ${selectedKeyword} [or similar ${selectedKeyword} heading]",
-      "content": "2-4 paragraphs about ${selectedKeyword} benefits (${sectionWords} words) - MUST mention ${selectedKeyword} 4-5 times",
-      "includesKeyword": true
+      "h2": "Benefits of ${selectedKeyword}",
+      "content": "Write exactly ${sectionWords} words about ${selectedKeyword} advantages. Include real data and statistics.",
+      "wordCount": ${sectionWords},
+      "keywordCount": 5
     },
     {
-      "h2": "How ${selectedKeyword} Works [or similar ${selectedKeyword} heading]",
-      "content": "2-4 paragraphs about ${selectedKeyword} process (${sectionWords} words) - MUST mention ${selectedKeyword} 4-5 times",
-      "includesKeyword": true
+      "h2": "How ${selectedKeyword} Works",
+      "content": "Write exactly ${sectionWords} words about ${selectedKeyword} process. Include technical details and steps.",
+      "wordCount": ${sectionWords},
+      "keywordCount": 5
     },
     {
-      "h2": "${selectedKeyword} Best Practices [or similar ${selectedKeyword} heading]",
-      "content": "2-4 paragraphs about ${selectedKeyword} best practices (${sectionWords} words) - MUST mention ${selectedKeyword} 4-5 times",
-      "includesKeyword": true
+      "h2": "${selectedKeyword} Best Practices",
+      "content": "Write exactly ${sectionWords} words about ${selectedKeyword} implementation. Include actionable tips.",
+      "wordCount": ${sectionWords},
+      "keywordCount": 5
     },
     {
-      "h2": "Conclusion: Getting Started with ${selectedKeyword}",
-      "content": "Concluding paragraphs about ${selectedKeyword} with call to action (${conclusionWords} words) - MUST mention ${selectedKeyword} 3-4 times",
-      "includesKeyword": true
-    }
-  ],
-  "inboundLinks": [
-    {
-      "text": "anchor text",
-      "url": "relevant industry resource URL",
-      "context": "where it fits in content"
-    }
-  ],
-  "outboundLinks": [
-    {
-      "text": "anchor text",
-      "url": "authoritative source URL",
-      "context": "where it fits in content"
-    }
-  ],
-  "imagePrompts": [
-    {
-      "section": "introduction",
-      "prompt": "Professional ${selectedKeyword} installation showing workers installing solar panels with ${selectedKeyword} equipment and safety gear",
-      "altText": "${selectedKeyword} - Professional installation process"
-    },
-    {
-      "section": "section2",
-      "prompt": "Technical diagram showing ${selectedKeyword} components, specifications, and installation details with labels and measurements",
-      "altText": "${selectedKeyword} technical diagram and components"
+      "h2": "Getting Started with ${selectedKeyword}",
+      "content": "Write exactly ${conclusionWords} words concluding about ${selectedKeyword}. Include ${companyName} call to action.",
+      "wordCount": ${conclusionWords},
+      "keywordCount": 4
     }
   ]
 }`;
@@ -753,7 +708,11 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
 
       // Clean all markdown formatting from the content
       if (parsedContent.introduction) {
-        parsedContent.introduction = this.cleanMarkdown(parsedContent.introduction);
+        if (typeof parsedContent.introduction === 'object') {
+          parsedContent.introduction.content = this.cleanMarkdown(parsedContent.introduction.content);
+        } else {
+          parsedContent.introduction = this.cleanMarkdown(parsedContent.introduction);
+        }
       }
       if (parsedContent.sections) {
         parsedContent.sections.forEach(section => {
@@ -765,9 +724,30 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
         parsedContent.conclusion = this.cleanMarkdown(parsedContent.conclusion);
       }
 
+      // Add word count tracking
+      const introContent = typeof parsedContent.introduction === 'object' ?
+        parsedContent.introduction.content : parsedContent.introduction;
+      const introWords = this.countWords(introContent);
+
+      let totalWords = introWords;
+      parsedContent.sections.forEach(section => {
+        const sectionWords = this.countWords(section.content);
+        section.actualWords = sectionWords;
+        section.targetWords = section.h2.toLowerCase().includes('conclusion') ||
+          section.h2.toLowerCase().includes('getting started') ? conclusionWords : sectionWords;
+        totalWords += sectionWords;
+      });
+
+      console.log(`📊 Word Count Analysis for "${selectedKeyword}":`);
+      console.log(`   Target: ${targetWordCount} words`);
+      console.log(`   Actual: ${totalWords} words`);
+      console.log(`   Accuracy: ${Math.round((totalWords / targetWordCount) * 100)}%`);
+
       // Merge with generated links
       parsedContent.inboundLinks = linkData.inboundLinks;
       parsedContent.outboundLinks = linkData.outboundLinks;
+      parsedContent.actualWordCount = totalWords;
+      parsedContent.targetWordCount = targetWordCount;
 
       return parsedContent;
     } catch (error) {
@@ -895,6 +875,11 @@ Generate a complete blog article about "${selectedKeyword}" with the following s
       .replace(/\n\s*\n\s*\n/g, '\n\n')
       .replace(/^\s+|\s+$/g, '')
       .trim();
+  }
+
+  countWords(text) {
+    if (!text) return 0;
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   }
 
   async generateBlockContent(prompt, blockType, companyContext) {
