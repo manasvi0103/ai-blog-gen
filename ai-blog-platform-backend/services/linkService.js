@@ -38,8 +38,8 @@ class LinkService {
       // Get authority links
       const authorityLinks = await this.getAuthorityLinks(keyword);
       
-      // Generate internal links (WattMonk specific)
-      const inboundLinks = this.generateWattMonkInternalLinks(keyword);
+      // Generate internal links (company specific)
+      const inboundLinks = this.generateCompanyInternalLinks(keyword, companyName);
       
       // Combine external links
       const outboundLinks = [
@@ -57,7 +57,7 @@ class LinkService {
     } catch (error) {
       console.error('Link generation error:', error.message);
       return {
-        inboundLinks: this.generateWattMonkInternalLinks(keyword),
+        inboundLinks: this.generateCompanyInternalLinks(keyword, companyName),
         outboundLinks: this.getFallbackAuthorityLinks(keyword)
       };
     }
@@ -160,6 +160,92 @@ class LinkService {
     }
 
     return authorityLinks.slice(0, 5);
+  }
+
+  /**
+   * Generate company-specific internal links
+   * @param {string} keyword - Focus keyword
+   * @param {string} companyName - Company name
+   * @returns {Array} Array of internal links
+   */
+  generateCompanyInternalLinks(keyword, companyName) {
+    if (companyName && companyName.toLowerCase().includes('ensite')) {
+      return this.generateEnsiteInternalLinks(keyword);
+    } else {
+      return this.generateWattMonkInternalLinks(keyword);
+    }
+  }
+
+  /**
+   * Generate Ensite internal links with comprehensive service coverage
+   * @param {string} keyword - Focus keyword
+   * @returns {Array} Array of internal links
+   */
+  generateEnsiteInternalLinks(keyword) {
+    const ensiteLinks = [
+      {
+        text: `${keyword} - Professional Solar Engineering Services`,
+        url: 'https://ensiteservices.com/solar-engineering/',
+        context: `Expert ${keyword} engineering and design services by Ensite's certified professionals`,
+        type: 'internal'
+      },
+      {
+        text: `${keyword} - Solar Permit Design Services`,
+        url: 'https://ensiteservices.com/solar-permit-design/',
+        context: `Comprehensive ${keyword} permit design and documentation services for faster approvals`,
+        type: 'internal'
+      },
+      {
+        text: `${keyword} - Solar Structural Engineering`,
+        url: 'https://ensiteservices.com/structural-engineering/',
+        context: `Professional ${keyword} structural analysis and engineering solutions`,
+        type: 'internal'
+      },
+      {
+        text: `${keyword} - Solar Project Management`,
+        url: 'https://ensiteservices.com/project-management/',
+        context: `End-to-end ${keyword} project management and coordination services`,
+        type: 'internal'
+      },
+      {
+        text: `${keyword} - Solar Consulting Services`,
+        url: 'https://ensiteservices.com/consulting/',
+        context: `Expert ${keyword} consulting and advisory services for optimal project outcomes`,
+        type: 'internal'
+      }
+    ];
+
+    // Filter out links that don't make sense for the keyword
+    const relevantLinks = ensiteLinks.filter(link => {
+      const keywordLower = keyword.toLowerCase();
+
+      // Always include if keyword contains solar, energy, or engineering terms
+      if (keywordLower.includes('solar') ||
+          keywordLower.includes('energy') ||
+          keywordLower.includes('engineering') ||
+          keywordLower.includes('design') ||
+          keywordLower.includes('permit') ||
+          keywordLower.includes('structural')) {
+        return true;
+      }
+
+      // Include specific service links based on keyword
+      if (keywordLower.includes('permit') && link.url.includes('permit')) return true;
+      if (keywordLower.includes('structural') && link.url.includes('structural')) return true;
+      if (keywordLower.includes('project') && link.url.includes('project')) return true;
+      if (keywordLower.includes('consulting') && link.url.includes('consulting')) return true;
+
+      return false;
+    });
+
+    // If no relevant links found, return first 3 as fallback
+    if (relevantLinks.length === 0) {
+      console.log(`⚠️ No relevant Ensite links found for keyword "${keyword}", using fallback`);
+      return ensiteLinks.slice(0, 3);
+    }
+
+    console.log(`✅ Generated ${relevantLinks.length} relevant Ensite internal links for "${keyword}"`);
+    return relevantLinks.slice(0, 5); // Return up to 5 relevant links
   }
 
   /**

@@ -21,9 +21,11 @@ class KeywordService {
         console.warn('⚠️ Could not fetch company context:', error.message);
       }
 
-      // 1. Try to get manual keywords from Google Sheets (if available)
+      // 1. Try to get manual keywords from Google Sheets (if available and not Ensite)
       let manualKeywords = [];
-      if (process.env.BLOG_DATA_SPREADSHEET_ID) {
+      const isEnsite = companyName && companyName.toLowerCase().includes('ensite');
+
+      if (!isEnsite && process.env.BLOG_DATA_SPREADSHEET_ID) {
         try {
           const allManualKeywords = await googleSheetsService.getKeywordsFromSheet(
             process.env.BLOG_DATA_SPREADSHEET_ID
@@ -33,6 +35,8 @@ class KeywordService {
         } catch (error) {
           console.warn('⚠️ Failed to fetch manual keywords from sheets:', error.message);
         }
+      } else if (isEnsite) {
+        console.log(`🏢 Ensite detected - using AI keywords instead of manual keywords`);
       }
 
       // 2. Generate AI keywords using Gemini (always generate 4 if no manual keywords)
@@ -129,6 +133,32 @@ class KeywordService {
         console.warn('⚠️ Could not fetch trending topics:', error.message);
       }
 
+      // Customize prompt based on company
+      const isEnsite = companyName && companyName.toLowerCase().includes('ensite');
+
+      let companySpecificGuidelines = '';
+      let companyExamples = '';
+
+      if (isEnsite) {
+        companySpecificGuidelines = `
+      - Focus on ENGINEERING and TECHNICAL solar services (Ensite specializes in solar engineering)
+      - Emphasize permit design, structural engineering, and technical consulting
+      - Include keywords related to solar project engineering and design services
+      - Target engineering professionals, solar developers, and technical audiences`;
+
+        companyExamples = `
+      Good examples for Ensite: "solar structural load calculations", "solar permit design requirements", "solar engineering standards", "solar project technical specifications"`;
+      } else {
+        companySpecificGuidelines = `
+      - Focus on INSTALLATION and DESIGN solar services
+      - Emphasize installation, design, and customer-facing services
+      - Include keywords related to solar installation and design services
+      - Target homeowners, property owners, and end customers`;
+
+        companyExamples = `
+      Good examples: "commercial solar ROI calculator", "solar panel degradation rates", "net metering benefits", "solar inverter troubleshooting"`;
+      }
+
       const prompt = `Generate exactly 4 relevant blog post keywords for a solar company called "${companyName}".
 
       IMPORTANT GUIDELINES:
@@ -138,9 +168,10 @@ class KeywordService {
       - Focus on technical, educational, and service-specific topics
       - Make keywords relevant to solar industry expertise and services
       - Avoid overused keywords like "solar PTO", "solar system design guide", "photovoltaic software"
+      ${companySpecificGuidelines}
       ${trendingTopics}
 
-      Good examples: "commercial solar ROI calculator", "solar panel degradation rates", "net metering benefits", "solar inverter troubleshooting"
+      ${companyExamples}
       Bad examples: "best solar company in India", "top solar installers California", "solar companies near me"
 
       Return only a JSON array with exactly 4 objects containing:
@@ -295,7 +326,47 @@ class KeywordService {
   }
 
   getFallbackKeywords(companyName) {
-    // Solar industry related fallback keywords
+    const companyLower = companyName ? companyName.toLowerCase() : '';
+
+    // Ensite-specific fallback keywords
+    if (companyLower.includes('ensite')) {
+      return [
+        {
+          focusKeyword: "solar engineering design standards",
+          articleFormat: "guide",
+          wordCount: "1800-2200",
+          targetAudience: "Solar engineers",
+          objective: "technical education",
+          source: "fallback"
+        },
+        {
+          focusKeyword: "solar permit documentation requirements",
+          articleFormat: "how-to",
+          wordCount: "1600-2000",
+          targetAudience: "Solar project managers",
+          objective: "lead generation",
+          source: "fallback"
+        },
+        {
+          focusKeyword: "solar structural load analysis",
+          articleFormat: "analysis",
+          wordCount: "1500-1800",
+          targetAudience: "Structural engineers",
+          objective: "thought leadership",
+          source: "fallback"
+        },
+        {
+          focusKeyword: "solar project technical specifications",
+          articleFormat: "guide",
+          wordCount: "1700-2000",
+          targetAudience: "Solar developers",
+          objective: "education",
+          source: "fallback"
+        }
+      ];
+    }
+
+    // Default solar industry related fallback keywords
     return [
       {
         focusKeyword: "solar panel installation guide",
@@ -355,7 +426,7 @@ class KeywordService {
       }
     ];
   }
-  
+
   async getUsedKeywords() {
     try {
       console.log('🔍 Checking for already used keywords...');
@@ -404,7 +475,42 @@ class KeywordService {
 
     const companyLower = companyName.toLowerCase();
 
-    if (companyLower.includes('wattmonk')) {
+    if (companyLower.includes('ensite')) {
+      return [
+        {
+          focusKeyword: 'solar structural engineering requirements',
+          articleFormat: 'guide',
+          wordCount: '1800-2200',
+          targetAudience: 'Solar engineers and developers',
+          objective: 'technical education',
+          source: 'company-specific'
+        },
+        {
+          focusKeyword: 'solar permit design best practices',
+          articleFormat: 'how-to',
+          wordCount: '1600-2000',
+          targetAudience: 'Solar project managers',
+          objective: 'lead generation',
+          source: 'company-specific'
+        },
+        {
+          focusKeyword: 'solar project engineering standards',
+          articleFormat: 'analysis',
+          wordCount: '1500-1800',
+          targetAudience: 'Solar engineering professionals',
+          objective: 'thought leadership',
+          source: 'company-specific'
+        },
+        {
+          focusKeyword: 'solar technical consulting services',
+          articleFormat: 'guide',
+          wordCount: '1700-2000',
+          targetAudience: 'Solar developers and contractors',
+          objective: 'lead generation',
+          source: 'company-specific'
+        }
+      ];
+    } else if (companyLower.includes('wattmonk')) {
       return [
         {
           focusKeyword: 'solar design and engineering services',
@@ -436,41 +542,6 @@ class KeywordService {
           wordCount: '1200-1800',
           targetAudience: 'Solar professionals',
           objective: 'brand awareness',
-          source: 'company-specific'
-        }
-      ];
-    } else if (companyLower.includes('ensite')) {
-      return [
-        {
-          focusKeyword: 'professional solar site survey services',
-          articleFormat: 'guide',
-          wordCount: '2000-2500',
-          targetAudience: 'Solar installers and contractors',
-          objective: 'lead generation',
-          source: 'company-specific'
-        },
-        {
-          focusKeyword: 'solar site assessment and planning',
-          articleFormat: 'how-to',
-          wordCount: '1800-2200',
-          targetAudience: 'Property owners',
-          objective: 'education',
-          source: 'company-specific'
-        },
-        {
-          focusKeyword: 'solar installation feasibility study',
-          articleFormat: 'guide',
-          wordCount: '1500-2000',
-          targetAudience: 'Solar developers',
-          objective: 'lead generation',
-          source: 'company-specific'
-        },
-        {
-          focusKeyword: 'residential solar site evaluation',
-          articleFormat: 'listicle',
-          wordCount: '1200-1800',
-          targetAudience: 'Homeowners',
-          objective: 'lead generation',
           source: 'company-specific'
         }
       ];
