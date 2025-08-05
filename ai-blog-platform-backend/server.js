@@ -3,7 +3,7 @@
  *
  * Production-ready blog generation platform with:
  * - Clean AI-powered content generation
- * - WordPress integration with Elementor support
+ * - WordPress integration with WattMonk styling
  * - RankMath SEO optimization
  * - Clean 1200x1200 image generation
  * - Robust error handling and logging

@@ -3,7 +3,7 @@
  * 
  * Production-ready WordPress service with:
  * - Clean WordPress REST API integration
- * - Elementor-compatible block generation
+ * - Clean HTML content generation with WattMonk styling
  * - WattMonk brand styling and SEO optimization
  * - Feature image upload and management
  * - Error handling and logging
@@ -14,7 +14,6 @@
 
 const axios = require('axios');
 const Company = require('../models/Company');
-const elementorService = require('./elementorService');
 
 class WordPressService {
   constructor() {
@@ -40,28 +39,26 @@ class WordPressService {
       // Generate SEO-optimized slug
       const seoSlug = this.generateSEOSlug(draftData.focusKeyword || draftData.title);
 
-      // Convert content to Elementor JSON format for better editing experience
-      let elementorContent = '';
-      let elementorMetaData = {};
+      // Convert content to clean WordPress format
+      let wordpressContent = '';
 
       if (draftData.contentBlocks && Array.isArray(draftData.contentBlocks)) {
-        // Use new Elementor JSON format for structured content
-        console.log(`🎨 USING ELEMENTOR JSON FORMAT: Converting ${draftData.contentBlocks.length} content blocks`);
+        // Convert content blocks to clean HTML
+        console.log(`📝 Converting ${draftData.contentBlocks.length} content blocks to WordPress format`);
         console.log(`📋 Content blocks types:`, draftData.contentBlocks.map(b => b.type).join(', '));
-        elementorMetaData = elementorService.generateElementorMetaData(draftData.contentBlocks, draftData.focusKeyword);
-        elementorContent = '<!-- Elementor content managed via _elementor_data meta field -->';
-        console.log(`✅ Generated Elementor meta data with ${Object.keys(elementorMetaData).length} fields`);
+        wordpressContent = this.convertContentBlocksToHTML(draftData.contentBlocks, draftData.focusKeyword);
+        console.log(`✅ Generated clean WordPress content`);
       } else {
-        // Fallback to WordPress blocks for legacy content
-        console.log(`📝 USING LEGACY FORMAT: Converting content to WordPress blocks`);
-        elementorContent = this.convertToElementorBlocks(draftData.content, draftData.focusKeyword);
+        // Use existing content with WattMonk styling
+        console.log(`📝 Using existing content with WattMonk styling`);
+        wordpressContent = this.applyWattMonkStyling(draftData.content, draftData.focusKeyword);
       }
 
       // Prepare WordPress post data with comprehensive SEO optimization
       // H1 → WordPress post title, Meta Title & Description → RankMath fields
       const postData = {
         title: draftData.title,                    // H1 becomes WordPress post title
-        content: elementorContent,                 // Elementor content or WordPress blocks
+        content: wordpressContent,                 // Clean WordPress content with WattMonk styling
         status: 'draft',
         slug: draftData.slug || seoSlug,          // SEO-optimized URL slug
         excerpt: draftData.metaDescription || this.generateExcerpt(draftData.content, 160)
@@ -72,7 +69,7 @@ class WordPressService {
       console.log(`   Meta Title → RankMath: "${draftData.metaTitle || draftData.title}"`);
       console.log(`   Meta Description → RankMath: "${draftData.metaDescription || 'Auto-generated'}"`);
       console.log(`   Focus Keyword → RankMath: "${draftData.focusKeyword || 'Not set'}"`);
-      console.log(`   Content Format: ${draftData.contentBlocks ? 'Elementor JSON' : 'WordPress Blocks'}`);
+      console.log(`   Content Format: Clean WordPress HTML with WattMonk styling`);
 
       // Store meta fields separately for post-creation update
       // These are SEO-optimized values that should score 85-100/100 in RankMath
@@ -85,7 +82,7 @@ class WordPressService {
         _yoast_wpseo_meta_robots_nofollow: '0',
 
         // RankMath SEO meta fields (OPTIMIZED FOR 85-100/100 SCORE)
-        ...this.generateRankMathMetaFields(draftData)
+        ...this.generateRankMathMetaFields(draftData),
 
         // All in One SEO Pack meta fields (another popular SEO plugin)
         _aioseop_title: draftData.metaTitle || draftData.title,
@@ -95,10 +92,7 @@ class WordPressService {
         // SEOPress meta fields
         _seopress_titles_title: draftData.metaTitle || draftData.title,
         _seopress_titles_desc: draftData.metaDescription || this.generateExcerpt(draftData.content, 160),
-        _seopress_analysis_target_kw: draftData.focusKeyword || '',
-
-        // Elementor meta fields for better editing experience
-        ...elementorMetaData
+        _seopress_analysis_target_kw: draftData.focusKeyword || ''
       };
 
       // Add meta fields to post data for initial attempt
@@ -177,7 +171,7 @@ class WordPressService {
     console.log(`🎯 RankMath Meta Title: "${postData.meta?.rank_math_title || 'Not set'}"`);
     console.log(`📄 RankMath Meta Description: "${postData.meta?.rank_math_description || 'Not set'}"`);
     console.log(`🔍 RankMath Focus Keyword: "${postData.meta?.rank_math_focus_keyword || 'Not set'}"`);
-    console.log(`🎨 Content Format: ${postData.meta?._elementor_data ? 'Elementor JSON' : 'WordPress Blocks'}`);
+    console.log(`🎨 Content Format: Clean HTML with WattMonk styling`);
     console.log(`📊 Total Meta Fields: ${Object.keys(postData.meta || {}).length}`);
 
     try {
@@ -258,13 +252,13 @@ class WordPressService {
           metaDescription: postData.meta?.rank_math_description || postData.excerpt,
           focusKeyword: postData.meta?.rank_math_focus_keyword || 'Not specified',
           rankMathOptimized: true,
-          elementorEnabled: !!postData.meta?._elementor_data,
+          wattmonkStyling: true,
           instructions: [
             '✅ RankMath SEO fields have been automatically set',
-            '✅ Elementor content is ready for visual editing',
+            '✅ WattMonk brand styling applied to content',
             'Go to WordPress admin → Posts → Edit this post',
             'RankMath will show 85-100/100 SEO score automatically',
-            'Use Elementor editor for drag-and-drop content editing',
+            'Content is ready for publishing with professional formatting',
             `Focus Keyword: "${postData.meta?.rank_math_focus_keyword || 'Not set'}" is optimized`
           ],
           expectedRankMathScore: '85-100/100'
@@ -583,16 +577,121 @@ class WordPressService {
   }
 
   /**
-   * Convert content to Elementor-compatible WordPress blocks
-   * @param {string} content - HTML content to convert
+   * Convert content blocks to clean HTML with WattMonk styling
+   * @param {Array} contentBlocks - Array of content blocks
    * @param {string} focusKeyword - SEO focus keyword
-   * @returns {string} WordPress blocks with Elementor compatibility
+   * @returns {string} Clean HTML content with WattMonk styling
    */
-  convertToElementorBlocks(content, focusKeyword) {
-    console.log('🔄 Converting content to Elementor-compatible blocks...');
+  convertContentBlocksToHTML(contentBlocks, focusKeyword) {
+    console.log('🔄 Converting content blocks to clean HTML...');
 
-    // WattMonk brand colors and typography - Updated to match template
-    const wattmonkStyles = {
+    const wattmonkStyles = this.getWattMonkStyles();
+    let htmlContent = '';
+
+    for (const block of contentBlocks) {
+      switch (block.type) {
+        case 'h1':
+        case 'title':
+          htmlContent += `<h1 style="color: ${wattmonkStyles.headingColor}; font-family: ${wattmonkStyles.primaryFont}; font-weight: 800; font-size: 42px; line-height: 1.2; margin-bottom: 20px;">${block.content}</h1>\n`;
+          break;
+        case 'h2':
+          htmlContent += `<h2 style="color: ${wattmonkStyles.h2Color}; font-family: ${wattmonkStyles.primaryFont}; font-weight: ${wattmonkStyles.fontWeight}; font-size: 32px; line-height: 1.3; margin: 30px 0 15px 0;">${block.content}</h2>\n`;
+          break;
+        case 'h3':
+          htmlContent += `<h3 style="color: ${wattmonkStyles.headingColor}; font-family: ${wattmonkStyles.primaryFont}; font-weight: 700; font-size: 24px; line-height: 1.4; margin: 25px 0 10px 0;">${block.content}</h3>\n`;
+          break;
+        case 'paragraph':
+        case 'introduction':
+        case 'section':
+          htmlContent += `<p style="color: ${wattmonkStyles.textColor}; font-family: ${wattmonkStyles.primaryFont}; font-size: 16px; line-height: 1.7; margin-bottom: 20px;">${block.content}</p>\n`;
+          break;
+        case 'list':
+          const listItems = block.content.split('\n').filter(item => item.trim());
+          htmlContent += `<ul style="color: ${wattmonkStyles.textColor}; font-family: ${wattmonkStyles.primaryFont}; font-size: 16px; line-height: 1.7; margin-bottom: 20px; padding-left: 20px;">\n`;
+          listItems.forEach(item => {
+            htmlContent += `  <li style="margin-bottom: 8px;">${item.trim()}</li>\n`;
+          });
+          htmlContent += `</ul>\n`;
+          break;
+        case 'image':
+          if (block.imageUrl) {
+            htmlContent += `<figure style="margin: 30px 0; text-align: center;">\n`;
+            htmlContent += `  <img src="${block.imageUrl}" alt="${block.alt || ''}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />\n`;
+            if (block.caption) {
+              htmlContent += `  <figcaption style="color: ${wattmonkStyles.textColor}; font-family: ${wattmonkStyles.primaryFont}; font-size: 14px; margin-top: 10px; font-style: italic;">${block.caption}</figcaption>\n`;
+            }
+            htmlContent += `</figure>\n`;
+          }
+          break;
+        default:
+          // Default to paragraph for unknown types
+          htmlContent += `<p style="color: ${wattmonkStyles.textColor}; font-family: ${wattmonkStyles.primaryFont}; font-size: 16px; line-height: 1.7; margin-bottom: 20px;">${block.content}</p>\n`;
+      }
+    }
+
+    // Add "You May Also Like" section
+    htmlContent += this.addRelatedArticlesSection();
+
+    console.log(`✅ Generated clean HTML content with WattMonk styling`);
+    return htmlContent;
+  }
+
+  /**
+   * Apply WattMonk styling to existing content
+   * @param {string} content - HTML content to style
+   * @param {string} focusKeyword - SEO focus keyword
+   * @returns {string} Styled HTML content
+   */
+  applyWattMonkStyling(content, focusKeyword) {
+    console.log('🔄 Applying WattMonk styling to existing content...');
+
+    const wattmonkStyles = this.getWattMonkStyles();
+    let styledContent = content;
+
+    // Apply WattMonk styling to HTML elements
+    styledContent = styledContent.replace(
+      /<h1([^>]*)>/g,
+      `<h1 style="color: ${wattmonkStyles.headingColor}; font-family: ${wattmonkStyles.primaryFont}; font-weight: 800; font-size: 42px; line-height: 1.2; margin-bottom: 20px;">`
+    );
+
+    styledContent = styledContent.replace(
+      /<h2([^>]*)>/g,
+      `<h2 style="color: ${wattmonkStyles.h2Color}; font-family: ${wattmonkStyles.primaryFont}; font-weight: ${wattmonkStyles.fontWeight}; font-size: 32px; line-height: 1.3; margin: 30px 0 15px 0;">`
+    );
+
+    styledContent = styledContent.replace(
+      /<h3([^>]*)>/g,
+      `<h3 style="color: ${wattmonkStyles.headingColor}; font-family: ${wattmonkStyles.primaryFont}; font-weight: 700; font-size: 24px; line-height: 1.4; margin: 25px 0 10px 0;">`
+    );
+
+    styledContent = styledContent.replace(
+      /<p([^>]*)>/g,
+      `<p style="color: ${wattmonkStyles.textColor}; font-family: ${wattmonkStyles.primaryFont}; font-size: 16px; line-height: 1.7; margin-bottom: 20px;">`
+    );
+
+    styledContent = styledContent.replace(
+      /<ul([^>]*)>/g,
+      `<ul style="color: ${wattmonkStyles.textColor}; font-family: ${wattmonkStyles.primaryFont}; font-size: 16px; line-height: 1.7; margin-bottom: 20px; padding-left: 20px;">`
+    );
+
+    styledContent = styledContent.replace(
+      /<li([^>]*)>/g,
+      `<li style="margin-bottom: 8px;">`
+    );
+
+    // Add "You May Also Like" section
+    styledContent += this.addRelatedArticlesSection();
+
+    console.log(`✅ Applied WattMonk styling to content`);
+    return styledContent;
+  }
+
+  /**
+   * Get WattMonk brand styles
+   * @returns {Object} WattMonk styling configuration
+   */
+  getWattMonkStyles() {
+    return {
       primaryFont: "'Roboto', 'Arial', sans-serif",
       headingColor: "#1A202C",
       h2Color: "#FBD46F", // Golden yellow for H2 headings
@@ -603,73 +702,42 @@ class WordPressService {
       backgroundColor: "#FFF8E1",
       fontWeight: "600" // Semi Bold
     };
-
-    let elementorContent = '';
-    const lines = content.split('\n').filter(line => line.trim());
-
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) continue;
-
-      if (trimmedLine.startsWith('<h1')) {
-        const h1Content = trimmedLine.replace(/<\/?h1[^>]*>/g, '');
-        elementorContent += this.wrapInWordPressBlock(h1Content, 'h1', wattmonkStyles);
-      } else if (trimmedLine.startsWith('<h2')) {
-        const h2Content = trimmedLine.replace(/<\/?h2[^>]*>/g, '');
-        elementorContent += this.wrapInWordPressBlock(h2Content, 'h2', wattmonkStyles);
-      } else if (trimmedLine.startsWith('<p')) {
-        const pContent = trimmedLine.replace(/<\/?p[^>]*>/g, '');
-        if (pContent.trim()) {
-          elementorContent += this.wrapInWordPressBlock(pContent, 'paragraph', wattmonkStyles);
-        }
-      } else if (trimmedLine.includes('<img')) {
-        // Handle images
-        elementorContent += this.wrapInWordPressBlock(trimmedLine, 'image', wattmonkStyles);
-      } else if (trimmedLine.trim().length > 0) {
-        // Default to paragraph for any other content
-        elementorContent += this.wrapInWordPressBlock(trimmedLine, 'paragraph', wattmonkStyles);
-      }
-    }
-
-    // Add "You May Also Like" section at the end
-    elementorContent += this.addRelatedArticlesSection(wattmonkStyles);
-
-    console.log(`✅ Converted to ${elementorContent.split('<!-- wp:').length - 1} WordPress blocks`);
-    return elementorContent;
-  }
-
-  /**
-   * Wrap content in WordPress blocks with WattMonk styling
-   * @param {string} content - Content to wrap
-   * @param {string} type - Block type
-   * @param {Object} styles - WattMonk styles object
-   * @returns {string} WordPress block HTML
-   */
-  wrapInWordPressBlock(content, type, styles) {
-    if (!content.trim()) return '';
-
-    switch (type) {
-      case 'paragraph':
-        return `<!-- wp:group {"className":"elementor-section wattmonk-content"} -->\n<div class="wp-block-group elementor-section wattmonk-content">\n<!-- wp:paragraph {"className":"elementor-widget elementor-widget-text-editor","style":{"typography":{"fontSize":"16px","lineHeight":"1.7","fontFamily":"${styles.primaryFont}","fontWeight":"400"},"color":{"text":"${styles.textColor}"},"spacing":{"margin":{"bottom":"20px"}}}} -->\n<p class="elementor-widget elementor-widget-text-editor wattmonk-text" style="font-size:16px;line-height:1.7;font-family:${styles.primaryFont};font-weight:400;color:${styles.textColor};margin-bottom:20px;">${content.trim()}</p>\n<!-- /wp:paragraph -->\n</div>\n<!-- /wp:group -->\n\n`;
-
-      case 'h2':
-        return `<!-- wp:group {"className":"elementor-section wattmonk-heading"} -->\n<div class="wp-block-group elementor-section wattmonk-heading">\n<!-- wp:heading {"level":2,"className":"elementor-widget elementor-widget-heading","style":{"typography":{"fontSize":"28px","fontWeight":"${styles.fontWeight}","lineHeight":"1.3","fontFamily":"${styles.primaryFont}"},"color":{"text":"${styles.h2Color}"},"spacing":{"margin":{"top":"40px","bottom":"24px"}}}} -->\n<h2 class="elementor-widget elementor-widget-heading wattmonk-h2" style="font-size:28px;font-weight:${styles.fontWeight};line-height:1.3;font-family:${styles.primaryFont};color:${styles.h2Color};margin-top:40px;margin-bottom:24px;">${content.trim()}</h2>\n<!-- /wp:heading -->\n</div>\n<!-- /wp:group -->\n\n`;
-
-      case 'h1':
-        return `<!-- wp:group {"className":"elementor-section wattmonk-main-heading"} -->\n<div class="wp-block-group elementor-section wattmonk-main-heading">\n<!-- wp:heading {"level":1,"className":"elementor-widget elementor-widget-heading","style":{"typography":{"fontSize":"42px","fontWeight":"800","lineHeight":"1.2","fontFamily":"${styles.primaryFont}"},"color":{"text":"${styles.headingColor}"},"spacing":{"margin":{"top":"0px","bottom":"30px"}}}} -->\n<h1 class="elementor-widget elementor-widget-heading wattmonk-h1" style="font-size:42px;font-weight:800;line-height:1.2;font-family:${styles.primaryFont};color:${styles.headingColor};margin-top:0px;margin-bottom:30px;">${content.trim()}</h1>\n<!-- /wp:heading -->\n</div>\n<!-- /wp:group -->\n\n`;
-
-      default:
-        return `<!-- wp:group {"className":"elementor-section wattmonk-content"} -->\n<div class="wp-block-group elementor-section wattmonk-content">\n<!-- wp:paragraph {"className":"elementor-widget elementor-widget-text-editor","style":{"typography":{"fontSize":"16px","lineHeight":"1.7","fontFamily":"${styles.primaryFont}","fontWeight":"400"},"color":{"text":"${styles.textColor}"},"spacing":{"margin":{"bottom":"20px"}}}} -->\n<p class="elementor-widget elementor-widget-text-editor wattmonk-text" style="font-size:16px;line-height:1.7;font-family:${styles.primaryFont};font-weight:400;color:${styles.textColor};margin-bottom:20px;">${content.trim()}</p>\n<!-- /wp:paragraph -->\n</div>\n<!-- /wp:group -->\n\n`;
-    }
   }
 
   /**
    * Add "You May Also Like" related articles section
-   * @param {Object} styles - WattMonk styles object
    * @returns {string} Related articles section HTML
    */
-  addRelatedArticlesSection(styles) {
-    return `<!-- wp:group {"className":"elementor-section related-articles wattmonk-related","style":{"spacing":{"padding":{"top":"50px","bottom":"40px"}},"border":{"top":{"color":"${styles.accentColor}","width":"3px"}},"background":{"color":"#FAFAFA"}}} -->\n<div class="wp-block-group elementor-section related-articles wattmonk-related" style="padding-top:50px;padding-bottom:40px;border-top:3px solid ${styles.accentColor};background-color:#FAFAFA;">\n<!-- wp:heading {"level":3,"className":"elementor-widget elementor-widget-heading","style":{"typography":{"fontSize":"28px","fontWeight":"700","fontFamily":"${styles.primaryFont}"},"color":{"text":"${styles.headingColor}"},"spacing":{"margin":{"bottom":"30px"}}}} -->\n<h3 class="elementor-widget elementor-widget-heading wattmonk-related-title" style="font-size:28px;font-weight:700;font-family:${styles.primaryFont};color:${styles.headingColor};margin-bottom:30px;text-align:center;">⚡ You May Also Like</h3>\n<!-- /wp:heading -->\n<!-- wp:list {"className":"elementor-widget elementor-widget-text-editor related-links wattmonk-links","style":{"typography":{"fontSize":"17px","lineHeight":"1.6","fontFamily":"${styles.primaryFont}"},"spacing":{"padding":{"left":"0px"}}}} -->\n<ul class="elementor-widget elementor-widget-text-editor related-links wattmonk-links" style="font-size:17px;line-height:1.6;font-family:${styles.primaryFont};padding-left:0px;list-style:none;max-width:800px;margin:0 auto;">\n<li style="margin-bottom:16px;padding:20px;background:${styles.backgroundColor};border-radius:12px;border-left:5px solid ${styles.accentColor};box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s ease;"><a href="https://www.wattmonk.com/solar-pto-process-to-accelerate-approval/" target="_blank" style="color:${styles.headingColor};text-decoration:none;font-weight:600;display:block;">📋 Solar PTO Guide: Avoid Delays & Speed Up Approvals</a><span style="color:#666;font-size:14px;margin-top:5px;display:block;">Complete guide to streamline your solar PTO process</span></li>\n<li style="margin-bottom:16px;padding:20px;background:${styles.backgroundColor};border-radius:12px;border-left:5px solid ${styles.accentColor};box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s ease;"><a href="https://www.wattmonk.com/service/pto-interconnection/" target="_blank" style="color:${styles.headingColor};text-decoration:none;font-weight:600;display:block;">⚡ Solar PTO Interconnection Made Easy</a><span style="color:#666;font-size:14px;margin-top:5px;display:block;">Professional interconnection services for solar projects</span></li>\n<li style="margin-bottom:16px;padding:20px;background:${styles.backgroundColor};border-radius:12px;border-left:5px solid ${styles.accentColor};box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s ease;"><a href="https://www.wattmonk.com/utility-interconnection/" target="_blank" style="color:${styles.headingColor};text-decoration:none;font-weight:600;display:block;">🔌 Utility Interconnection Services</a><span style="color:#666;font-size:14px;margin-top:5px;display:block;">Expert utility interconnection solutions</span></li>\n<li style="margin-bottom:16px;padding:20px;background:${styles.backgroundColor};border-radius:12px;border-left:5px solid ${styles.accentColor};box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s ease;"><a href="https://www.wattmonk.com/solar-pv-agrivoltaic-guide/" target="_blank" style="color:${styles.headingColor};text-decoration:none;font-weight:600;display:block;">🌱 Solar PV Agrivoltaic Complete Guide</a><span style="color:#666;font-size:14px;margin-top:5px;display:block;">Comprehensive guide to agrivoltaic solar systems</span></li>\n</ul>\n<!-- /wp:list -->\n</div>\n<!-- /wp:group -->\n\n`;
+  addRelatedArticlesSection() {
+    const styles = this.getWattMonkStyles();
+
+    return `
+<div style="margin-top: 50px; padding: 40px 20px; background-color: #FAFAFA; border-top: 3px solid ${styles.accentColor}; border-radius: 8px;">
+  <h3 style="color: ${styles.headingColor}; font-family: ${styles.primaryFont}; font-weight: 700; font-size: 28px; text-align: center; margin-bottom: 30px;">⚡ You May Also Like</h3>
+
+  <div style="max-width: 800px; margin: 0 auto;">
+    <div style="margin-bottom: 16px; padding: 20px; background: ${styles.backgroundColor}; border-radius: 12px; border-left: 5px solid ${styles.accentColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <a href="https://www.wattmonk.com/solar-pto-process-to-accelerate-approval/" target="_blank" style="color: ${styles.headingColor}; text-decoration: none; font-weight: 600; font-family: ${styles.primaryFont}; display: block; font-size: 17px;">📋 Solar PTO Guide: Avoid Delays & Speed Up Approvals</a>
+      <span style="color: #666; font-size: 14px; margin-top: 5px; display: block; font-family: ${styles.primaryFont};">Complete guide to streamline your solar PTO process</span>
+    </div>
+
+    <div style="margin-bottom: 16px; padding: 20px; background: ${styles.backgroundColor}; border-radius: 12px; border-left: 5px solid ${styles.accentColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <a href="https://www.wattmonk.com/service/pto-interconnection/" target="_blank" style="color: ${styles.headingColor}; text-decoration: none; font-weight: 600; font-family: ${styles.primaryFont}; display: block; font-size: 17px;">⚡ Solar PTO Interconnection Made Easy</a>
+      <span style="color: #666; font-size: 14px; margin-top: 5px; display: block; font-family: ${styles.primaryFont};">Professional interconnection services for solar projects</span>
+    </div>
+
+    <div style="margin-bottom: 16px; padding: 20px; background: ${styles.backgroundColor}; border-radius: 12px; border-left: 5px solid ${styles.accentColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <a href="https://www.wattmonk.com/utility-interconnection/" target="_blank" style="color: ${styles.headingColor}; text-decoration: none; font-weight: 600; font-family: ${styles.primaryFont}; display: block; font-size: 17px;">🔌 Utility Interconnection Services</a>
+      <span style="color: #666; font-size: 14px; margin-top: 5px; display: block; font-family: ${styles.primaryFont};">Expert utility interconnection solutions</span>
+    </div>
+
+    <div style="margin-bottom: 16px; padding: 20px; background: ${styles.backgroundColor}; border-radius: 12px; border-left: 5px solid ${styles.accentColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <a href="https://www.wattmonk.com/solar-pv-agrivoltaic-guide/" target="_blank" style="color: ${styles.headingColor}; text-decoration: none; font-weight: 600; font-family: ${styles.primaryFont}; display: block; font-size: 17px;">🌱 Solar PV Agrivoltaic Complete Guide</a>
+      <span style="color: #666; font-size: 14px; margin-top: 5px; display: block; font-family: ${styles.primaryFont};">Comprehensive guide to agrivoltaic solar systems</span>
+    </div>
+  </div>
+</div>
+`;
   }
 
   /**

@@ -299,6 +299,201 @@ class ImageService {
     }
   }
 
+  /**
+   * Generate dynamic, unique image prompts based on blog content and keyword
+   * @param {string} keyword - Focus keyword for the blog
+   * @param {string} blogTitle - Blog title for context
+   * @param {string} companyName - Company name for branding
+   * @param {string} imageType - Type of image (feature, content, etc.)
+   * @param {Array} contentBlocks - Content blocks for context
+   * @returns {string} Dynamic image prompt
+   */
+  generateDynamicImagePrompt(keyword, blogTitle = '', companyName = 'WattMonk', imageType = 'feature', contentBlocks = []) {
+    console.log(`🎨 Generating dynamic image prompt for keyword: "${keyword}"`);
+
+    // Extract context from content blocks
+    const contentContext = this.extractContentContext(contentBlocks, keyword);
+
+    // Generate unique prompt based on keyword and context
+    const basePrompts = this.getKeywordSpecificPrompts(keyword, contentContext);
+    const selectedPrompt = basePrompts[Math.floor(Math.random() * basePrompts.length)];
+
+    // Add variation based on image type
+    const typeVariation = this.getImageTypeVariation(imageType, keyword);
+
+    // Combine for unique prompt
+    const uniquePrompt = `${selectedPrompt} ${typeVariation}, professional ${keyword} photography, high quality, modern solar technology, ${companyName} branding style`;
+
+    console.log(`✅ Generated unique prompt: "${uniquePrompt}"`);
+    return uniquePrompt;
+  }
+
+  /**
+   * Extract relevant context from content blocks
+   * @param {Array} contentBlocks - Content blocks to analyze
+   * @param {string} keyword - Focus keyword
+   * @returns {Object} Context object with themes and topics
+   */
+  extractContentContext(contentBlocks, keyword) {
+    const context = {
+      themes: [],
+      topics: [],
+      settings: [],
+      actions: []
+    };
+
+    if (!contentBlocks || contentBlocks.length === 0) {
+      return context;
+    }
+
+    // Analyze content for themes and topics
+    const allContent = contentBlocks
+      .filter(block => block.content && typeof block.content === 'string')
+      .map(block => block.content.toLowerCase())
+      .join(' ');
+
+    // Extract themes
+    const themeKeywords = {
+      residential: ['home', 'house', 'residential', 'homeowner', 'roof', 'rooftop'],
+      commercial: ['business', 'commercial', 'office', 'warehouse', 'industrial'],
+      installation: ['install', 'mount', 'setup', 'construction', 'worker'],
+      maintenance: ['maintain', 'clean', 'inspect', 'repair', 'service'],
+      technology: ['inverter', 'battery', 'monitoring', 'smart', 'grid'],
+      savings: ['save', 'cost', 'money', 'bill', 'reduce', 'efficient'],
+      environment: ['green', 'clean', 'sustainable', 'carbon', 'environment']
+    };
+
+    Object.entries(themeKeywords).forEach(([theme, keywords]) => {
+      if (keywords.some(kw => allContent.includes(kw))) {
+        context.themes.push(theme);
+      }
+    });
+
+    return context;
+  }
+
+  /**
+   * Get keyword-specific image prompt variations
+   * @param {string} keyword - Focus keyword
+   * @param {Object} context - Content context
+   * @returns {Array} Array of prompt variations
+   */
+  getKeywordSpecificPrompts(keyword, context) {
+    const keywordLower = keyword.toLowerCase();
+
+    // Base prompt templates for different scenarios
+    const promptTemplates = {
+      installation: [
+        `Professional solar panel installation team working on ${keywordLower} project with safety equipment`,
+        `Modern ${keywordLower} installation showing detailed solar panel mounting process`,
+        `Expert technicians installing ${keywordLower} system with precision tools and equipment`,
+        `Step-by-step ${keywordLower} installation process with professional workers`,
+        `High-tech ${keywordLower} installation featuring advanced solar technology`
+      ],
+      technology: [
+        `Cutting-edge ${keywordLower} technology showcasing modern solar equipment`,
+        `Advanced ${keywordLower} system with smart monitoring and control features`,
+        `Professional ${keywordLower} setup featuring latest solar innovations`,
+        `Modern ${keywordLower} technology installation with digital displays`,
+        `High-performance ${keywordLower} system with professional grade components`
+      ],
+      residential: [
+        `Beautiful residential ${keywordLower} installation on modern home rooftop`,
+        `Family home featuring elegant ${keywordLower} system integration`,
+        `Suburban house with professionally installed ${keywordLower} solution`,
+        `Modern residential ${keywordLower} setup with clean architectural lines`,
+        `Homeowner-friendly ${keywordLower} installation with aesthetic appeal`
+      ],
+      commercial: [
+        `Large-scale commercial ${keywordLower} installation on business building`,
+        `Industrial ${keywordLower} system for commercial energy needs`,
+        `Professional commercial ${keywordLower} setup with enterprise features`,
+        `Business facility with comprehensive ${keywordLower} solution`,
+        `Corporate ${keywordLower} installation showcasing scalability`
+      ],
+      maintenance: [
+        `Professional ${keywordLower} maintenance and inspection service`,
+        `Expert technician performing ${keywordLower} system maintenance`,
+        `Detailed ${keywordLower} cleaning and optimization process`,
+        `Professional ${keywordLower} service and performance monitoring`,
+        `Comprehensive ${keywordLower} maintenance with diagnostic tools`
+      ],
+      savings: [
+        `${keywordLower} system demonstrating energy savings and efficiency`,
+        `Cost-effective ${keywordLower} solution showing financial benefits`,
+        `Energy-efficient ${keywordLower} installation with savings visualization`,
+        `Smart ${keywordLower} system optimizing energy costs`,
+        `Professional ${keywordLower} setup maximizing energy savings`
+      ]
+    };
+
+    // Determine which category best fits the keyword and context
+    let category = 'technology'; // default
+
+    if (keywordLower.includes('install') || context.themes.includes('installation')) {
+      category = 'installation';
+    } else if (keywordLower.includes('residential') || keywordLower.includes('home') || context.themes.includes('residential')) {
+      category = 'residential';
+    } else if (keywordLower.includes('commercial') || keywordLower.includes('business') || context.themes.includes('commercial')) {
+      category = 'commercial';
+    } else if (keywordLower.includes('maintain') || keywordLower.includes('service') || context.themes.includes('maintenance')) {
+      category = 'maintenance';
+    } else if (keywordLower.includes('saving') || keywordLower.includes('cost') || context.themes.includes('savings')) {
+      category = 'savings';
+    }
+
+    return promptTemplates[category] || promptTemplates.technology;
+  }
+
+  /**
+   * Get image type specific variations
+   * @param {string} imageType - Type of image
+   * @param {string} keyword - Focus keyword
+   * @returns {string} Type-specific variation
+   */
+  getImageTypeVariation(imageType, keyword) {
+    const variations = {
+      feature: 'hero shot, wide angle, professional composition',
+      content: 'detailed view, technical focus, educational perspective',
+      section: 'specific aspect, close-up detail, informative angle',
+      conclusion: 'overview perspective, comprehensive view, summary visual'
+    };
+
+    return variations[imageType] || variations.content;
+  }
+
+  /**
+   * Regenerate all image prompts for a blog with fresh, unique prompts
+   * @param {string} keyword - Focus keyword
+   * @param {string} blogTitle - Blog title
+   * @param {string} companyName - Company name
+   * @param {Array} contentBlocks - Content blocks for context
+   * @returns {Object} Updated image prompts for all image blocks
+   */
+  regenerateAllImagePrompts(keyword, blogTitle, companyName, contentBlocks) {
+    console.log(`🔄 Regenerating all image prompts for keyword: "${keyword}"`);
+
+    const updatedPrompts = {};
+    const imageBlocks = contentBlocks.filter(block => block.type === 'image');
+
+    imageBlocks.forEach((block, index) => {
+      // Generate a unique prompt for each image block
+      const imageType = block.imageType || (index === 0 ? 'feature' : 'content');
+      const uniquePrompt = this.generateDynamicImagePrompt(
+        keyword,
+        blogTitle,
+        companyName,
+        imageType,
+        contentBlocks
+      );
+
+      updatedPrompts[block.id] = uniquePrompt;
+      console.log(`🎨 Updated prompt for ${block.id}: "${uniquePrompt}"`);
+    });
+
+    return updatedPrompts;
+  }
+
   // Generate a related title for the image based on blog title or prompt
   generateImageTitle(blogTitle, prompt) {
     try {

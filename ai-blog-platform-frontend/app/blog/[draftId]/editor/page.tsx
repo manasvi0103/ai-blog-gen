@@ -216,10 +216,17 @@ export default function EditorPage() {
             }, imageBlocks.indexOf(block) * 2000) // 2 second delay between each
           } else {
             console.warn(`⚠️ No prompt found for image block ${block.id}`)
-            // Generate a fallback prompt based on the keyword and block type
-            const fallbackPrompt = `Professional ${currentKeyword} related image for solar industry, high quality, modern technology`
-            prompts[block.id] = fallbackPrompt
-            setImagePrompts(prev => ({ ...prev, [block.id]: fallbackPrompt }))
+            // Generate a dynamic fallback prompt based on the keyword and block type
+            const fallbackPrompts = [
+              `Professional ${currentKeyword} installation with expert technicians and modern equipment`,
+              `Advanced ${currentKeyword} technology showcasing innovative solar solutions`,
+              `High-quality ${currentKeyword} system demonstrating professional installation process`,
+              `Modern ${currentKeyword} setup featuring cutting-edge solar technology`,
+              `Expert ${currentKeyword} service with professional-grade equipment and safety standards`
+            ]
+            const randomPrompt = fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)]
+            prompts[block.id] = randomPrompt
+            setImagePrompts(prev => ({ ...prev, [block.id]: randomPrompt }))
 
             setTimeout(() => {
               handleGenerateImage(block.id)

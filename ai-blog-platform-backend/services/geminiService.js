@@ -18,9 +18,12 @@ class GeminiService {
   }
 
   async generateContent(prompt, companyContext = {}) {
+    // Validate company context to ensure content is always company-specific
+    const validatedContext = this.validateCompanyContext(companyContext);
+
     if (!this.apiKey || this.apiKey === 'your_gemini_api_key_here') {
       console.warn('⚠️ Gemini API key not configured, using high-quality fallback content');
-      return this.generateHighQualityFallback(prompt, companyContext);
+      return this.generateHighQualityFallback(prompt, validatedContext);
     }
 
     // Try multiple models in case one is overloaded
@@ -30,7 +33,7 @@ class GeminiService {
         console.log(`🤖 Trying Gemini model: ${model}`);
         console.log('🔑 Gemini API Key in service:', this.apiKey ? 'SET' : 'NOT SET');
 
-        const contextualPrompt = this.buildContextualPrompt(prompt, companyContext);
+        const contextualPrompt = this.buildContextualPrompt(prompt, validatedContext);
 
         const response = await axios.post(
           `${this.baseUrl}/${model}:generateContent?key=${this.apiKey}`,
@@ -59,7 +62,7 @@ class GeminiService {
         const generatedText = response.data.candidates[0].content.parts[0].text;
         console.log(`✅ Successfully generated content with ${model}`);
         console.log(`🔍 Generated content preview: "${generatedText.substring(0, 200)}..."`);
-        console.log(`🏢 Company mentioned in content: ${generatedText.includes(companyContext.name || 'WattMonk') ? 'YES' : 'NO'}`);
+        console.log(`🏢 Company mentioned in content: ${generatedText.includes(validatedContext.name || 'WattMonk') ? 'YES' : 'NO'}`);
 
         return {
           content: generatedText,
@@ -80,6 +83,39 @@ class GeminiService {
         continue;
       }
     }
+  }
+
+  /**
+   * Validate and ensure company context is properly set for company-specific content
+   * @param {Object} companyContext - Company context object
+   * @returns {Object} Validated company context with required fields
+   */
+  validateCompanyContext(companyContext = {}) {
+    const validated = { ...companyContext };
+
+    // Ensure required company fields are present
+    if (!validated.name) {
+      console.warn('⚠️ Company name missing in context, defaulting to WattMonk');
+      validated.name = 'WattMonk';
+    }
+
+    if (!validated.servicesOffered) {
+      console.warn('⚠️ Company services missing in context, using default');
+      validated.servicesOffered = 'Solar Design, Engineering, Permitting, Installation Support';
+    }
+
+    if (!validated.serviceOverview) {
+      console.warn('⚠️ Company service overview missing in context, using default');
+      validated.serviceOverview = 'Professional solar design, engineering, permitting, and installation support services';
+    }
+
+    if (!validated.aboutTheCompany) {
+      console.warn('⚠️ Company description missing in context, using default');
+      validated.aboutTheCompany = 'WattMonk is a technology-driven solar services company providing end-to-end solar solutions.';
+    }
+
+    console.log(`✅ Company context validated for: ${validated.name}`);
+    return validated;
   }
 
   generateHighQualityFallback(prompt, companyContext = {}) {
@@ -173,18 +209,37 @@ class GeminiService {
       content = String(content);
     }
 
+    // Clean any JSON objects that might have been inserted into content
+    content = this.cleanJSONFromContent(content);
+
     let enhancedContent = content;
 
-    // Add company mentions if missing
-    if (!enhancedContent.includes(companyContext.name)) {
+    // Ensure company mentions are present (MANDATORY for company-specific content)
+    const companyMentions = (enhancedContent.match(new RegExp(companyContext.name, 'gi')) || []).length;
+    console.log(`🏢 Company mentions found: ${companyMentions} for ${companyContext.name}`);
+
+    if (companyMentions === 0) {
+      console.log(`⚠️ No company mentions found! Adding ${companyContext.name} to content...`);
       // Add company mention in first paragraph
       const firstParagraph = enhancedContent.split('\n')[0];
-      if (firstParagraph) {
+      if (firstParagraph && firstParagraph.length > 20) {
         const enhancedFirstParagraph = firstParagraph.replace(
           /\. /,
           `. At ${companyContext.name}, our expertise in ${companyContext.servicesOffered || 'solar services'} helps clients optimize their ${keyword} strategies. `
         );
         enhancedContent = enhancedContent.replace(firstParagraph, enhancedFirstParagraph);
+      } else {
+        // If first paragraph is too short, add at the beginning
+        enhancedContent = `At ${companyContext.name}, we specialize in ${companyContext.servicesOffered || 'solar services'} and understand the importance of ${keyword}. ${enhancedContent}`;
+      }
+    }
+
+    // Ensure minimum company mentions (at least 2)
+    if (companyMentions < 2) {
+      console.log(`⚠️ Only ${companyMentions} company mentions found! Adding more references to ${companyContext.name}...`);
+      // Add company mention in conclusion if content is long enough
+      if (enhancedContent.length > 500) {
+        enhancedContent += `\n\n${companyContext.name}'s team of experts is ready to help you with your ${keyword} needs. Contact us to learn more about our ${companyContext.servicesOffered || 'solar services'}.`;
       }
     }
 
@@ -224,19 +279,111 @@ class GeminiService {
     return enhancedContent;
   }
 
+  /**
+   * Clean JSON objects and database references from content
+   * @param {string} content - Content that might contain JSON objects
+   * @returns {string} Cleaned content without JSON objects
+   */
+  cleanJSONFromContent(content) {
+    if (!content || typeof content !== 'string') return content;
+
+    console.log('🧹 Cleaning JSON objects from content...');
+
+    // Remove JSON objects like { name: 'Solar Sales Proposal', description: '', _id: new ObjectId("...") }
+    const jsonObjectRegex = /\{\s*[^}]*(?:name|_id|description|ObjectId)[^}]*\}/g;
+    let cleanedContent = content.replace(jsonObjectRegex, '');
+
+    // Remove MongoDB ObjectId references
+    const objectIdRegex = /new ObjectId\([^)]*\)/g;
+    cleanedContent = cleanedContent.replace(objectIdRegex, '');
+
+    // Remove standalone object references like { name: '...', ... }
+    const standaloneObjectRegex = /\{\s*[^}]*:\s*[^}]*\}/g;
+    cleanedContent = cleanedContent.replace(standaloneObjectRegex, '');
+
+    // Clean up extra spaces and line breaks
+    cleanedContent = cleanedContent
+      .replace(/\s+/g, ' ')
+      .replace(/\s*,\s*,/g, ',')
+      .replace(/\s*\.\s*\./g, '.')
+      .trim();
+
+    if (content !== cleanedContent) {
+      console.log('🧹 Removed JSON objects from content');
+      console.log('📝 Before:', content.substring(0, 200) + '...');
+      console.log('✅ After:', cleanedContent.substring(0, 200) + '...');
+    }
+
+    return cleanedContent;
+  }
+
   getContentTemplates(keyword, companyName, companyContext = {}) {
     const services = companyContext.servicesOffered || 'solar services';
     const about = companyContext.aboutTheCompany || 'professional solar company';
     const overview = companyContext.serviceOverview || 'solar solutions';
 
     return [
-      `Understanding ${keyword} is essential for modern solar professionals and homeowners looking to maximize their energy efficiency. At ${companyName}, our expertise in ${services} has helped thousands of clients optimize their ${keyword} strategies. According to NREL research (https://www.nrel.gov/solar/), proper ${keyword} implementation can significantly improve system performance. ${about} Our comprehensive approach combines industry best practices with cutting-edge technology to deliver exceptional results for every ${keyword} project.`,
+      `Understanding **${keyword}** is essential for modern solar professionals and homeowners looking to maximize their energy efficiency. At **${companyName}**, our expertise in *${services}* has helped thousands of clients optimize their ${keyword} strategies.
 
-      `The solar industry continues to evolve rapidly, and ${keyword} represents a significant opportunity for both residential and commercial applications. ${companyName} specializes in ${services}, providing clients with cutting-edge ${keyword} solutions that are both cost-effective and environmentally sustainable. Our team's experience with ${overview} ensures that every ${keyword} implementation meets the highest industry standards. Professional installers and energy consultants trust ${companyName} to stay current with the latest developments in ${keyword}.`,
+According to [NREL research](https://www.nrel.gov/solar/), proper ${keyword} implementation can significantly improve system performance. ${about} Our comprehensive approach combines industry best practices with cutting-edge technology to deliver exceptional results for every ${keyword} project.
 
-      `When it comes to ${keyword}, proper planning and execution are crucial for success. ${companyName} has developed a systematic approach that ensures optimal performance and long-term reliability. Our expertise in ${services} spans multiple applications, from small residential projects to large-scale commercial installations. According to SEIA data (https://www.seia.org/solar-industry-research-data), projects with proper ${keyword} planning show 25% better performance. This makes ${companyName} the trusted choice for solar professionals nationwide.`,
+> **Key Benefits:**
+> - Enhanced system performance through proper implementation
+> - Cost-effective solutions tailored to your needs
+> - Industry-leading expertise and support
 
-      `${keyword.charAt(0).toUpperCase() + keyword.slice(1)} technology has revolutionized the way we approach solar energy systems. ${companyName} leverages advanced ${keyword} techniques through our ${services} to optimize system performance and reduce installation costs. ${about} Our team of certified professionals brings years of experience in ${keyword} implementation, ensuring that every project meets the highest standards of quality and efficiency. Visit https://www.wattmonk.com/service/ to learn more about our comprehensive ${keyword} solutions.`
+Furthermore, our team provides:
+- **Professional consultation** and system analysis
+- **Custom design solutions** for residential and commercial projects
+- **Ongoing support** and maintenance services`,
+
+      `The solar industry continues to evolve rapidly, and **${keyword}** represents a significant opportunity for both residential and commercial applications. **${companyName}** specializes in *${services}*, providing clients with cutting-edge ${keyword} solutions that are both cost-effective and environmentally sustainable.
+
+Our team's experience with ${overview} ensures that every ${keyword} implementation meets the highest industry standards. Professional installers and energy consultants trust **${companyName}** to stay current with the latest developments in ${keyword}.
+
+## Key Advantages of Our Approach
+
+| Feature | Benefit | Impact |
+|---------|---------|---------|
+| **Expert Design** | Optimized system performance | Up to 25% efficiency gain |
+| **Quality Components** | Long-term reliability | 25+ year lifespan |
+| **Professional Installation** | Code compliance | Worry-free operation |
+
+Additionally, we provide:
+1. **Comprehensive site assessment** and feasibility studies
+2. **Custom engineering solutions** for complex installations
+3. **Permit assistance** and regulatory compliance support`,
+
+      `When it comes to **${keyword}**, proper planning and execution are crucial for success. **${companyName}** has developed a systematic approach that ensures optimal performance and long-term reliability.
+
+Our expertise in *${services}* spans multiple applications, from small residential projects to large-scale commercial installations. According to [SEIA data](https://www.seia.org/solar-industry-research-data), projects with proper ${keyword} planning show **25% better performance**. This makes **${companyName}** the trusted choice for solar professionals nationwide.
+
+### Our Proven Process:
+
+1. **Initial Assessment** - Comprehensive site evaluation and energy analysis
+2. **Custom Design** - Tailored solutions using advanced modeling software
+3. **Professional Installation** - Certified technicians ensure quality workmanship
+4. **System Commissioning** - Thorough testing and performance verification
+
+> *"Proper ${keyword} implementation is the foundation of any successful solar project. Our systematic approach ensures every detail is optimized for maximum performance."* - ${companyName} Engineering Team`,
+
+      `**${keyword.charAt(0).toUpperCase() + keyword.slice(1)}** technology has revolutionized the way we approach solar energy systems. **${companyName}** leverages advanced ${keyword} techniques through our *${services}* to optimize system performance and reduce installation costs.
+
+${about} Our team of certified professionals brings years of experience in ${keyword} implementation, ensuring that every project meets the highest standards of quality and efficiency.
+
+## Why Choose ${companyName}?
+
+- ✅ **Industry Expertise** - Over `1000+` successful installations
+- ✅ **Advanced Technology** - Latest tools and software for optimal design
+- ✅ **Quality Assurance** - Rigorous testing and validation processes
+- ✅ **Customer Support** - Dedicated team for ongoing assistance
+
+### Technical Specifications:
+- **System Efficiency**: Up to `22%` module efficiency
+- **Warranty Coverage**: `25-year` performance guarantee
+- **Installation Time**: Typically `1-3 days` for residential projects
+
+Visit [WattMonk Services](https://www.wattmonk.com/service/) to learn more about our comprehensive ${keyword} solutions and how we can help optimize your solar project.`
     ];
   }
 
@@ -251,11 +398,22 @@ class GeminiService {
       if (typeof value === 'object' && value !== null) {
         console.log(`⚠️ Found object in companyContext.${key}:`, value);
         // Extract meaningful string from object
-        if (value.name) cleanContext[key] = value.name;
-        else if (value.toString && typeof value.toString === 'function') cleanContext[key] = value.toString();
-        else cleanContext[key] = String(value);
+        if (value.name) {
+          cleanContext[key] = value.name;
+        } else if (value.title) {
+          cleanContext[key] = value.title;
+        } else if (value.description) {
+          cleanContext[key] = value.description;
+        } else if (Array.isArray(value)) {
+          // Handle arrays by joining them
+          cleanContext[key] = value.join(', ');
+        } else {
+          // For other objects, try to extract meaningful text or skip
+          console.warn(`⚠️ Skipping object in companyContext.${key} - cannot extract meaningful text`);
+          cleanContext[key] = ''; // Set to empty string instead of stringifying object
+        }
       } else {
-        cleanContext[key] = value;
+        cleanContext[key] = value || '';
       }
     }
 
@@ -290,8 +448,45 @@ CONTENT REQUIREMENTS (CRITICAL):
 - ALWAYS reference specific services: "${cleanContext.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support'}"
 - ALWAYS include actual company expertise and background
 - ALWAYS write as if you are an expert from ${cleanContext.name || 'WattMonk'}
+
+RANKMATH CONTENT STRUCTURE REQUIREMENTS (CRITICAL FOR SEO):
+- Use proper paragraph structure (3-5 sentences per paragraph)
+- Start each paragraph with strong topic sentences
+- Use transition words between paragraphs (Furthermore, Additionally, Moreover, However, Therefore, In addition)
+- Include bullet points or numbered lists for better readability (at least 2-3 per section)
+- Use short sentences (under 25 words) mixed with medium sentences (25-35 words)
+- Ensure proper heading hierarchy (H1 > H2 > H3)
+- Include specific examples, statistics, and actionable insights
+- End sections with clear transitions or conclusions
+- Use active voice whenever possible
+- Include relevant keywords naturally throughout the content
+
+MARKDOWN FORMATTING REQUIREMENTS (CRITICAL FOR READABILITY):
+- Use **bold text** for important terms and key concepts (minimum 5-8 per section)
+- Use *italic text* for emphasis and technical terms (minimum 2-3 per section)
+- Use proper markdown headings (## for H2, ### for H3) with clear hierarchy
+- Format bullet points with proper markdown (- or *) for lists and benefits
+- Format numbered lists with proper markdown (1. 2. 3.) for processes and steps
+- Use tables with proper markdown formatting when presenting data or comparisons
+- Use > blockquotes for important quotes, statistics, or key insights
+- Use `code formatting` for technical specifications, measurements, and numbers
+- Use [link text](URL) format for all external links
+- Ensure proper line breaks and spacing between sections (double line breaks)
+- Use horizontal rules (---) to separate major sections when appropriate
+- Include checkmarks (✅) for benefits and advantages lists
+- Use proper table formatting with | separators and alignment
 - ALWAYS use specific, actionable information rather than vague statements
 - ALWAYS start content with company introduction like "At ${cleanContext.name || 'WattMonk'}, we..."
+
+CONTENT FORMATTING EXAMPLES (FOLLOW THESE PATTERNS):
+- **Bold for key terms**: "Understanding **solar PTO interconnection** is essential..."
+- *Italic for emphasis*: "At *WattMonk*, our expertise in solar design..."
+- Tables for data: | Feature | Benefit | Impact |
+- Blockquotes for stats: > "Projects show 25% better performance with proper planning"
+- Lists with checkmarks: ✅ **Industry Expertise** - Over 1000+ installations
+- Code for specs: System efficiency up to \`22%\` module efficiency
+- Proper links: [NREL research](https://www.nrel.gov/solar/)
+- Line spacing: Use double line breaks between sections for readability
 
 COMPANY INTEGRATION REQUIREMENTS (MANDATORY):
 - MUST mention "${cleanContext.name || 'WattMonk'}" by name at least 2-3 times in content
@@ -301,6 +496,8 @@ COMPANY INTEGRATION REQUIREMENTS (MANDATORY):
 - MUST show how ${cleanContext.name || 'WattMonk'}'s expertise applies to the topic
 - MUST include real examples from ${cleanContext.name || 'WattMonk'}'s experience
 - NEVER use generic terms like "solar company" or "the company" - always use "${cleanContext.name || 'WattMonk'}"
+- Do NOT mention competitors or other companies unless specifically comparing ${cleanContext.name || 'WattMonk'}'s advantages
+- ALL examples, case studies, and references must be related to ${cleanContext.name || 'WattMonk'}'s services and expertise
 
 LINK INTEGRATION REQUIREMENTS:
 - Include 1-2 relevant industry links naturally in content

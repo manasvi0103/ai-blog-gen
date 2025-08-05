@@ -474,6 +474,17 @@ router.post('/select-keyword-analyze', async (req, res) => {
       tone: 'Expert, trustworthy, solution-focused'
     };
 
+    // Validate company context for company-specific content
+    console.log(`🏢 COMPANY CONTEXT VALIDATION:`);
+    console.log(`   Company Name: ${companyContext.name}`);
+    console.log(`   Services: ${companyContext.servicesOffered}`);
+    console.log(`   About: ${companyContext.aboutTheCompany.substring(0, 100)}...`);
+    console.log(`   Using company data: ${blog.companyId?.name ? 'YES (from database)' : 'NO (using fallback)'}`);
+
+    if (!blog.companyId?.name) {
+      console.warn(`⚠️ WARNING: Company data not found in database! Content will use fallback data for ${companyContext.name}`);
+    }
+
     // Generate H1, meta title, and meta description using Gemini
     const metaService = require('../services/metaService');
 
@@ -1092,15 +1103,24 @@ router.post('/generate-structured-content', async (req, res) => {
 
     console.log(`🔨 Creating 9 SEO-optimized blocks for RankMath compliance: "${selectedKeyword}"`);
 
-    // Block 1: Feature Image (keyword-specific)
+    // Block 1: Feature Image (keyword-specific with dynamic prompt)
+    const imageService = require('../services/imageService');
+    const dynamicFeaturePrompt = imageService.generateDynamicImagePrompt(
+      selectedKeyword,
+      selectedH1,
+      companyName,
+      'feature',
+      [] // Will be populated with content blocks later
+    );
+
     contentBlocks.push({
       id: `feature-img-${blockId++}`,
       type: "image",
       imageType: "feature",
       content: "",
       editable: false,
-      imagePrompt: `Professional ${selectedKeyword} installation showing solar panels being installed on a residential roof with workers in safety gear`,
-      altText: `${selectedKeyword} - Professional installation process`,
+      imagePrompt: dynamicFeaturePrompt,
+      altText: `${selectedKeyword} - ${companyName} professional solution`,
       generated: false,
       seoOptimized: true
     });
@@ -1159,16 +1179,24 @@ router.post('/generate-structured-content', async (req, res) => {
           seoNote: seoBlock.seoNotes
         });
 
-        // Add inline image for second section
+        // Add inline image for second section with dynamic prompt
         if (index === 3) { // After second content section
+          const dynamicInlinePrompt = imageService.generateDynamicImagePrompt(
+            selectedKeyword,
+            selectedH1,
+            companyName,
+            'content',
+            contentBlocks // Pass existing content for context
+          );
+
           contentBlocks.push({
             id: `inline-img-${blockId++}`,
             type: "image",
             imageType: "inline",
             content: "",
             editable: false,
-            imagePrompt: `Detailed diagram showing ${selectedKeyword} components and installation steps with technical specifications`,
-            altText: `${selectedKeyword} technical diagram and components`,
+            imagePrompt: dynamicInlinePrompt,
+            altText: `${selectedKeyword} - ${companyName} technical solution`,
             generated: false,
             seoOptimized: true
           });
@@ -1679,19 +1707,19 @@ router.post('/deploy-wordpress', async (req, res) => {
     const draftData = {
       title: draft.selectedH1 || draft.title || `${draft.selectedKeyword} Guide`,
       content: assembledContent,
-      contentBlocks: draft.generatedContent?.contentBlocks || [], // Pass content blocks for Elementor
+      contentBlocks: draft.generatedContent?.contentBlocks || [], // Pass content blocks for clean HTML generation
       metaTitle: draft.selectedMetaTitle || draft.metaTitle,
       metaDescription: draft.selectedMetaDescription || draft.metaDescription,
       focusKeyword: draft.selectedKeyword,
       featuredImage: featuredImageUrl ? { url: featuredImageUrl, altText: 'Featured image' } : null
     };
 
-    console.log(`🚀 DEPLOYING TO WORDPRESS WITH COMPLETE SEO + ELEMENTOR INTEGRATION:`);
+    console.log(`🚀 DEPLOYING TO WORDPRESS WITH COMPLETE SEO + WATTMONK STYLING:`);
     console.log(`📝 H1 → WordPress Title: "${draftData.title}"`);
     console.log(`🎯 Meta Title → RankMath: "${draftData.metaTitle}"`);
     console.log(`📄 Meta Description → RankMath: "${draftData.metaDescription}"`);
     console.log(`🔍 Focus Keyword → RankMath: "${draftData.focusKeyword}"`);
-    console.log(`🎨 Content Blocks → Elementor: ${draftData.contentBlocks?.length || 0} blocks`);
+    console.log(`🎨 Content Blocks → Clean HTML: ${draftData.contentBlocks?.length || 0} blocks`);
     console.log(`📊 Content Length: ${draftData.content.length} chars`);
     console.log(`🏢 Company: ${draft.blogId.companyId.name} (ID: ${draft.blogId.companyId._id})`);
     console.log(`🔧 WordPress Config: ${!!draft.blogId.companyId.wordpressConfig ? 'Ready' : 'Missing'}`);
@@ -2112,6 +2140,68 @@ router.post('/upload-image', imageService.getUploadMiddleware(), async (req, res
     res.status(500).json({
       success: false,
       message: 'Failed to upload image',
+      error: error.message
+    });
+  }
+});
+
+// POST regenerate image prompts for a draft
+router.post('/regenerate-image-prompts', async (req, res) => {
+  try {
+    const { draftId } = req.body;
+
+    if (!draftId) {
+      return res.status(400).json({ message: 'Draft ID is required' });
+    }
+
+    console.log(`🔄 Regenerating image prompts for draft ${draftId}`);
+
+    // Get the draft
+    const draft = await Draft.findById(draftId);
+    if (!draft) {
+      return res.status(404).json({ message: 'Draft not found' });
+    }
+
+    const keyword = draft.selectedKeyword || 'solar energy';
+    const blogTitle = draft.selectedH1 || draft.title || '';
+    const companyName = draft.blogId?.companyId?.name || 'WattMonk';
+    const contentBlocks = draft.generatedContent?.contentBlocks || [];
+
+    // Generate new unique prompts for all image blocks
+    const imageService = require('../services/imageService');
+    const updatedPrompts = imageService.regenerateAllImagePrompts(
+      keyword,
+      blogTitle,
+      companyName,
+      contentBlocks
+    );
+
+    // Update the content blocks with new prompts
+    if (draft.generatedContent && draft.generatedContent.contentBlocks) {
+      draft.generatedContent.contentBlocks.forEach(block => {
+        if (block.type === 'image' && updatedPrompts[block.id]) {
+          block.imagePrompt = updatedPrompts[block.id];
+          console.log(`✅ Updated prompt for block ${block.id}`);
+        }
+      });
+
+      // Save the updated draft
+      await draft.save();
+    }
+
+    console.log(`✅ Regenerated ${Object.keys(updatedPrompts).length} image prompts`);
+
+    res.json({
+      success: true,
+      updatedPrompts,
+      message: `Regenerated ${Object.keys(updatedPrompts).length} unique image prompts`
+    });
+
+  } catch (error) {
+    console.error('Image prompt regeneration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to regenerate image prompts',
       error: error.message
     });
   }
