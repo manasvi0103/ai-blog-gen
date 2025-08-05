@@ -324,6 +324,26 @@ router.get('/draft/:draftId', async (req, res) => {
       return res.status(404).json({ message: 'Draft not found' });
     }
 
+    // Debug: Log the draft structure
+    console.log('🔍 Draft structure:', {
+      draftId: draft._id,
+      blogId: draft.blogId?._id,
+      companyId: draft.blogId?.companyId?._id,
+      companyName: draft.blogId?.companyId?.name
+    });
+
+    // Debug: Log the full response structure that will be sent to frontend
+    console.log('📤 Response structure preview:', {
+      draftId: draft._id,
+      blogId: draft.blogId ? {
+        _id: draft.blogId._id,
+        companyId: draft.blogId.companyId ? {
+          _id: draft.blogId.companyId._id,
+          name: draft.blogId.companyId.name
+        } : null
+      } : null
+    });
+
     // Get real keywords for this company
     const companyName = draft.blogId?.companyId?.name || 'Unknown';
     let keywords = [];

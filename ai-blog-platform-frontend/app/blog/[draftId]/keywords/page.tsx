@@ -49,13 +49,30 @@ export default function KeywordsPage() {
 
   const loadKeywords = async () => {
     try {
-      // Get the draft to find the company name
+      // Get the draft which already includes keywords
       const draft = await api.getDraft(draftId)
-      const companyName = draft.blogId?.companyId?.name || 'Wattmonk'
+      console.log('🔍 Draft data:', draft)
+      console.log('🏢 Company data:', draft.blogId?.companyId)
+      console.log('🎯 Keywords from draft:', draft.keywords)
 
-      // Fetch real keywords from backend using API client
-      const keywordsData = await api.getKeywords(companyName)
-      setKeywords(keywordsData)
+      // Use keywords from draft response (they're already company-specific)
+      if (draft.keywords && draft.keywords.length > 0) {
+        console.log(`✅ Using ${draft.keywords.length} keywords from draft response`)
+        setKeywords(draft.keywords)
+      } else {
+        // Fallback: extract company name and fetch keywords separately
+        const companyName = draft.blogId?.companyId?.name
+        console.log('🎯 Company name extracted:', companyName)
+
+        if (!companyName) {
+          throw new Error('Company name not found in draft data and no keywords in draft')
+        }
+
+        // Fetch real keywords from backend using API client
+        console.log(`📡 Fallback: Fetching keywords for company: ${companyName}`)
+        const keywordsData = await api.getKeywords(companyName)
+        setKeywords(keywordsData)
+      }
 
     } catch (error) {
       console.error('Error loading keywords:', error)
