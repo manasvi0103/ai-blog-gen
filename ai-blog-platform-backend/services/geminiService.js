@@ -601,91 +601,42 @@ LINK INTEGRATION REQUIREMENTS:
     console.log(`   Each section: ${sectionWords} words`);
     console.log(`   Conclusion: ${conclusionWords} words`);
 
-    const expertPrompt = `You are a professional solar industry content writer. Write a comprehensive blog article about "${selectedKeyword}" for ${companyName}.
+    const expertPrompt = `You are a professional solar industry content writer. Create a comprehensive blog article about "${selectedKeyword}" for ${companyName}.
 
-CRITICAL INSTRUCTIONS:
-1. RESPOND ONLY WITH VALID JSON - NO EXTRA TEXT, NO EXPLANATIONS, NO "Here is the content"
-2. EXACT WORD COUNT CONTROL: Each section must be EXACTLY the specified word count
-3. WRITE NATURALLY - NO AI-STYLE PHRASES OR ROBOTIC LANGUAGE
-4. FOCUS EXCLUSIVELY ON "${selectedKeyword}" - NO GENERIC SOLAR CONTENT
+CRITICAL REQUIREMENTS:
+- Total word count: ${targetWordCount} words
+- Write naturally like a human expert
+- Focus exclusively on "${selectedKeyword}"
+- Include ${companyName} naturally throughout
+- NO AI phrases or robotic language
+- Create engaging, actionable content
 
-WORD COUNT REQUIREMENTS (STRICT):
-- Introduction: EXACTLY ${introWords} words
-- Each section: EXACTLY ${sectionWords} words
-- Conclusion: EXACTLY ${conclusionWords} words
-- TOTAL TARGET: ${targetWordCount} words
-
-WRITING STYLE:
-- Write like a human expert, not an AI
-- Use natural, conversational tone
-- Include specific data and examples
-- NO phrases like "Here is...", "Let me explain...", "In this article..."
-- NO AI-style introductions or conclusions
-- Start directly with valuable content about "${selectedKeyword}"
-
-CONTENT REQUIREMENTS:
-- Every paragraph must focus on "${selectedKeyword}"
-- Include real industry insights and data
-- Mention ${companyName}'s expertise naturally
-- Use "${selectedKeyword}" 4-5 times per section
-- Write actionable, practical content
-
-JSON OUTPUT REQUIREMENTS:
-- RESPOND WITH VALID JSON ONLY
-- NO extra text before or after JSON
-- NO explanations or comments
-- NO "Here is the content" or similar phrases
-
-LINKS TO INCLUDE:
-Internal Links: ${linkData.inboundLinks.map(link => `"${link.text}" → ${link.url}`).join(', ')}
-External Links: ${linkData.outboundLinks.map(link => `"${link.text}" → ${link.url}`).join(', ')}
-
-COMPANY CONTEXT:
-- Position ${companyName} as expert in ${selectedKeyword}
-- Reference ${companyName}'s services naturally
-- Include internal links where relevant
-
-RESPOND WITH THIS EXACT JSON STRUCTURE:
+RESPOND WITH VALID JSON ONLY (no extra text):
 {
   "title": "${selectedH1}",
   "metaTitle": "${selectedMetaTitle}",
   "metaDescription": "${selectedMetaDescription}",
-  "introduction": {
-    "content": "Write exactly ${introWords} words about ${selectedKeyword}. Start naturally without AI phrases. Focus on practical value.",
-    "wordCount": ${introWords}
-  },
-  "sections": [
-    {
-      "h2": "Understanding ${selectedKeyword}",
-      "content": "Write exactly ${sectionWords} words explaining ${selectedKeyword}. Include specific details and examples.",
-      "wordCount": ${sectionWords},
-      "keywordCount": 5
-    },
-    {
-      "h2": "Benefits of ${selectedKeyword}",
-      "content": "Write exactly ${sectionWords} words about ${selectedKeyword} advantages. Include real data and statistics.",
-      "wordCount": ${sectionWords},
-      "keywordCount": 5
-    },
-    {
-      "h2": "How ${selectedKeyword} Works",
-      "content": "Write exactly ${sectionWords} words about ${selectedKeyword} process. Include technical details and steps.",
-      "wordCount": ${sectionWords},
-      "keywordCount": 5
-    },
-    {
-      "h2": "${selectedKeyword} Best Practices",
-      "content": "Write exactly ${sectionWords} words about ${selectedKeyword} implementation. Include actionable tips.",
-      "wordCount": ${sectionWords},
-      "keywordCount": 5
-    },
-    {
-      "h2": "Getting Started with ${selectedKeyword}",
-      "content": "Write exactly ${conclusionWords} words concluding about ${selectedKeyword}. Include ${companyName} call to action.",
-      "wordCount": ${conclusionWords},
-      "keywordCount": 4
-    }
-  ]
+  "content": "Write a complete ${targetWordCount}-word blog article about ${selectedKeyword}. Structure it with:
+
+  1. Engaging introduction paragraph (${introWords} words) that hooks readers about ${selectedKeyword}
+
+  2. Main content with 4-5 natural sections covering:
+     - What ${selectedKeyword} is and why it matters
+     - Key benefits and advantages of ${selectedKeyword}
+     - How ${selectedKeyword} works in practice
+     - Cost considerations and ROI for ${selectedKeyword}
+     - Choosing the right ${selectedKeyword} solution
+
+  3. Strong conclusion (${conclusionWords} words) with ${companyName} call-to-action
+
+  Format with proper HTML:
+  - Use <h2 style='color: #FBD46F; font-family: Roboto; font-weight: 600;'> for section headings
+  - Use <p> tags for paragraphs
+  - Include <strong> for emphasis
+  - Add <ul> and <li> for bullet points where appropriate
+  - Naturally mention ${companyName} 3-4 times throughout
+  - Use ${selectedKeyword} 8-10 times total
+  - Write engaging, professional content that provides real value"
 }`;
 
     try {
@@ -706,50 +657,40 @@ RESPOND WITH THIS EXACT JSON STRUCTURE:
 
       const parsedContent = JSON.parse(cleanContent);
 
-      // Clean all markdown formatting from the content
-      if (parsedContent.introduction) {
-        if (typeof parsedContent.introduction === 'object') {
-          parsedContent.introduction.content = this.cleanMarkdown(parsedContent.introduction.content);
-        } else {
-          parsedContent.introduction = this.cleanMarkdown(parsedContent.introduction);
-        }
-      }
-      if (parsedContent.sections) {
-        parsedContent.sections.forEach(section => {
-          if (section.h2) section.h2 = this.cleanMarkdown(section.h2);
-          if (section.content) section.content = this.cleanMarkdown(section.content);
-        });
-      }
-      if (parsedContent.conclusion) {
-        parsedContent.conclusion = this.cleanMarkdown(parsedContent.conclusion);
+      // Clean the content and ensure proper formatting
+      if (parsedContent.content) {
+        // Clean any markdown and ensure proper HTML formatting
+        parsedContent.content = this.cleanMarkdown(parsedContent.content);
+
+        // Ensure H2 tags have the correct styling
+        parsedContent.content = parsedContent.content.replace(
+          /<h2[^>]*>/g,
+          "<h2 style='color: #FBD46F; font-family: Roboto; font-weight: 600;'>"
+        );
       }
 
-      // Add word count tracking
-      const introContent = typeof parsedContent.introduction === 'object' ?
-        parsedContent.introduction.content : parsedContent.introduction;
-      const introWords = this.countWords(introContent);
-
-      let totalWords = introWords;
-      parsedContent.sections.forEach(section => {
-        const sectionWords = this.countWords(section.content);
-        section.actualWords = sectionWords;
-        section.targetWords = section.h2.toLowerCase().includes('conclusion') ||
-          section.h2.toLowerCase().includes('getting started') ? conclusionWords : sectionWords;
-        totalWords += sectionWords;
-      });
+      // Calculate actual word count
+      const actualWordCount = this.countWords(parsedContent.content || '');
 
       console.log(`📊 Word Count Analysis for "${selectedKeyword}":`);
       console.log(`   Target: ${targetWordCount} words`);
-      console.log(`   Actual: ${totalWords} words`);
-      console.log(`   Accuracy: ${Math.round((totalWords / targetWordCount) * 100)}%`);
+      console.log(`   Actual: ${actualWordCount} words`);
+      console.log(`   Accuracy: ${Math.round((actualWordCount / targetWordCount) * 100)}%`);
 
-      // Merge with generated links
-      parsedContent.inboundLinks = linkData.inboundLinks;
-      parsedContent.outboundLinks = linkData.outboundLinks;
-      parsedContent.actualWordCount = totalWords;
-      parsedContent.targetWordCount = targetWordCount;
-
-      return parsedContent;
+      return {
+        success: true,
+        content: {
+          title: parsedContent.title,
+          metaTitle: parsedContent.metaTitle,
+          metaDescription: parsedContent.metaDescription,
+          content: parsedContent.content,
+          internalLinks: linkData.inboundLinks || [],
+          externalLinks: linkData.outboundLinks || []
+        },
+        wordCount: actualWordCount,
+        seoScore: this.calculateSEOScore(parsedContent.content, selectedKeyword, parsedContent.metaTitle, parsedContent.metaDescription),
+        message: `Professional blog content generated (${actualWordCount} words)`
+      };
     } catch (error) {
       console.error('Structured content generation error:', error);
       // Return fallback structure
@@ -840,6 +781,74 @@ RESPOND WITH THIS EXACT JSON STRUCTURE:
     return totalWords;
   }
 
+  calculateSEOScore(content, keyword, metaTitle, metaDescription) {
+    let score = 0;
+    const maxScore = 100;
+
+    if (!content || !keyword) return 0;
+
+    const keywordLower = keyword.toLowerCase();
+    const wordCount = this.countWords(content);
+
+    // Keyword in title (15 points)
+    if (metaTitle && metaTitle.toLowerCase().includes(keywordLower)) {
+      score += 15;
+    }
+
+    // Keyword in meta description (10 points)
+    if (metaDescription && metaDescription.toLowerCase().includes(keywordLower)) {
+      score += 10;
+    }
+
+    // Content length (20 points) - 1102+ words for optimal score
+    if (wordCount >= 1102) {
+      score += 20;
+    } else if (wordCount >= 800) {
+      score += 15;
+    } else if (wordCount >= 500) {
+      score += 10;
+    }
+
+    // Keyword density (15 points) - 0.5% to 2.5% is optimal
+    const keywordCount = (content.match(new RegExp(keywordLower, 'gi')) || []).length;
+    const density = (keywordCount / wordCount) * 100;
+    if (density >= 0.5 && density <= 2.5) {
+      score += 15;
+    } else if (density >= 0.3 && density <= 3.0) {
+      score += 10;
+    }
+
+    // Keyword in first 10% of content (15 points)
+    const first10Percent = content.substring(0, Math.floor(content.length * 0.1));
+    if (first10Percent.toLowerCase().includes(keywordLower)) {
+      score += 15;
+    }
+
+    // Meta description length (10 points) - 140-160 chars optimal
+    if (metaDescription) {
+      const metaLength = metaDescription.length;
+      if (metaLength >= 140 && metaLength <= 160) {
+        score += 10;
+      } else if (metaLength >= 120 && metaLength <= 180) {
+        score += 7;
+      }
+    }
+
+    // Title length (10 points) - under 60 chars
+    if (metaTitle && metaTitle.length <= 60) {
+      score += 10;
+    } else if (metaTitle && metaTitle.length <= 70) {
+      score += 7;
+    }
+
+    // Content structure (5 points) - has H2 headings
+    if (content.includes('<h2')) {
+      score += 5;
+    }
+
+    return Math.min(score, maxScore);
+  }
+
   cleanMarkdown(text) {
     if (!text) return text;
 
@@ -880,54 +889,6 @@ RESPOND WITH THIS EXACT JSON STRUCTURE:
   countWords(text) {
     if (!text) return 0;
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
-  }
-
-  async generateBlockContent(prompt, blockType, companyContext) {
-    try {
-      console.log(`🤖 Generating ${blockType} content with Gemini`);
-
-      const result = await this.generateContent(prompt, companyContext);
-
-      // Clean the content to remove any markdown formatting or unwanted characters
-      const cleanedContent = this.cleanMarkdown(result.content);
-
-      return {
-        content: cleanedContent,
-        wordCount: cleanedContent.split(' ').length,
-        blockType: blockType
-      };
-    } catch (error) {
-      console.error(`Block content generation error for ${blockType}:`, error);
-
-      // Fallback content based on block type
-      const fallbackContent = this.getFallbackContent(blockType, companyContext);
-      const cleanedFallback = this.cleanMarkdown(fallbackContent);
-
-      return {
-        content: cleanedFallback,
-        wordCount: cleanedFallback.split(' ').length,
-        blockType: blockType
-      };
-    }
-  }
-
-  getFallbackContent(blockType, companyContext) {
-    const keyword = companyContext.keyword || 'solar energy';
-    const companyName = companyContext.name || 'WattMonk';
-    const services = companyContext.servicesOffered || 'Solar Design, Engineering, Permitting, Installation Support';
-
-    const fallbacks = {
-      'title': `Complete Guide to ${keyword}`,
-      'introduction': `Are you ready to unlock the full potential of ${keyword}? At ${companyName}, we understand that a successful solar project goes beyond simply installing panels. It requires meticulous planning, innovative design, and precise engineering. That's where our ${services} come in. We transform sunlight into sustainable power, tailored to your unique needs. Forget cookie-cutter solutions. We delve deep, analyzing your site, energy consumption, and financial goals. Our team of experienced engineers and designers utilizes cutting-edge technology to create optimized solar solutions. We maximize energy production and minimize costs.`,
-      'conclusion': `${keyword} represents a significant opportunity for solar professionals. At ${companyName}, our expertise in ${services} has helped thousands of clients achieve their energy goals. By implementing the strategies and insights covered in this guide, you can enhance your services, improve customer satisfaction, and grow your solar business. Partner with ${companyName} and harness the sun's power with confidence.`,
-      'key-factors': `Several key factors are crucial when considering ${keyword} in solar installations. At ${companyName}, our ${services} focus on system efficiency, cost-effectiveness, regulatory compliance, and long-term performance. Understanding these factors helps solar professionals make informed decisions and provide better service to their customers.`,
-      'examples': `Real-world applications of ${keyword} in the solar industry demonstrate its practical value. At ${companyName}, we've successfully implemented ${keyword} principles in thousands of projects through our ${services}, resulting in improved performance and customer satisfaction across residential and commercial installations.`,
-      'benefits': `The benefits of ${keyword} for solar businesses include increased efficiency, reduced costs, improved customer satisfaction, and competitive advantages. At ${companyName}, our ${services} help solar companies differentiate themselves in the market and build stronger customer relationships through superior ${keyword} implementation.`,
-      'tips': `Best practices for ${keyword} include thorough planning, proper equipment selection, regular maintenance, and staying updated with industry standards. At ${companyName}, our ${services} incorporate these best practices to ensure optimal results and help solar professionals deliver exceptional service to their customers.`,
-      'section': `${keyword} plays an important role in the solar industry. At ${companyName}, our expertise in ${services} demonstrates how understanding ${keyword} applications, benefits, and implementation strategies helps solar professionals provide better services and achieve superior results for their customers.`
-    };
-
-    return fallbacks[blockType] || fallbacks['section'];
   }
 }
 

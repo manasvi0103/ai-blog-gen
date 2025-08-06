@@ -1693,22 +1693,30 @@ router.post('/deploy-wordpress', async (req, res) => {
         console.log(`📝 Found blogContent, attempting to use it`);
         const blogContent = draft.generatedContent.blogContent;
 
-        let contentParts = [];
-        if (blogContent.title) contentParts.push(`<h1>${blogContent.title}</h1>`);
-        if (blogContent.introduction) contentParts.push(`<p>${blogContent.introduction}</p>`);
+        // Handle new single content structure
+        if (blogContent.content) {
+          // New structure with single content field (already formatted HTML)
+          assembledContent = blogContent.content;
+          console.log(`✅ Using new content structure: ${assembledContent.length} characters`);
+        } else {
+          // Legacy structure with separate introduction/sections/conclusion
+          let contentParts = [];
+          if (blogContent.title) contentParts.push(`<h1>${blogContent.title}</h1>`);
+          if (blogContent.introduction) contentParts.push(`<p>${blogContent.introduction}</p>`);
 
-        if (blogContent.sections && Array.isArray(blogContent.sections)) {
-          blogContent.sections.forEach((section, index) => {
-            if (section.h2) contentParts.push(`<h2>${section.h2}</h2>`);
-            if (section.content) contentParts.push(`<p>${section.content}</p>`);
-          });
-        }
+          if (blogContent.sections && Array.isArray(blogContent.sections)) {
+            blogContent.sections.forEach((section, index) => {
+              if (section.h2) contentParts.push(`<h2>${section.h2}</h2>`);
+              if (section.content) contentParts.push(`<p>${section.content}</p>`);
+            });
+          }
 
-        if (blogContent.conclusion) contentParts.push(`<h2>Conclusion</h2>\n<p>${blogContent.conclusion}</p>`);
+          if (blogContent.conclusion) contentParts.push(`<h2>Conclusion</h2>\n<p>${blogContent.conclusion}</p>`);
 
-        if (contentParts.length > 0) {
-          assembledContent = contentParts.join('\n\n');
-          console.log(`✅ Assembled content from blogContent: ${assembledContent.length} characters`);
+          if (contentParts.length > 0) {
+            assembledContent = contentParts.join('\n\n');
+            console.log(`✅ Assembled content from legacy structure: ${assembledContent.length} characters`);
+          }
         }
       }
     }
@@ -2222,6 +2230,87 @@ router.post('/regenerate-image-prompts', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to regenerate image prompts',
+      error: error.message
+    });
+  }
+});
+
+// POST regenerate content for existing draft with improved structure
+router.post('/:draftId/regenerate-content', async (req, res) => {
+  try {
+    const { draftId } = req.params;
+
+    console.log(`🔄 Regenerating content for draft: ${draftId}`);
+
+    // Get the existing draft
+    const draft = await Draft.findById(draftId).populate('blogId');
+    if (!draft) {
+      return res.status(404).json({
+        success: false,
+        message: 'Draft not found'
+      });
+    }
+
+    // Get company context
+    const company = await Company.findById(draft.blogId.companyId);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    // Prepare data for content generation
+    const contentData = {
+      selectedKeyword: draft.selectedKeyword,
+      selectedH1: draft.selectedH1,
+      selectedMetaTitle: draft.selectedMetaTitle,
+      selectedMetaDescription: draft.selectedMetaDescription,
+      companyName: company.name,
+      companyContext: {
+        name: company.name,
+        aboutTheCompany: company.aboutTheCompany,
+        servicesOffered: company.servicesOffered,
+        serviceOverview: company.serviceOverview,
+        targetAudience: company.targetAudience
+      },
+      targetWordCount: 2500,
+      strictKeywordFocus: true,
+      generateAllBlocks: true
+    };
+
+    console.log(`🎯 Regenerating content for keyword: "${draft.selectedKeyword}"`);
+
+    // Generate new improved content
+    const geminiService = require('../services/geminiService');
+    const result = await geminiService.generateStructuredBlogContent(contentData);
+
+    if (result.success) {
+      // Update the draft with new content
+      await Draft.findByIdAndUpdate(draftId, {
+        'generatedContent.blogContent': result.content,
+        'generatedContent.wordCount': result.wordCount,
+        'generatedContent.lastSaved': new Date(),
+        'generatedContent.generatedAt': new Date()
+      });
+
+      console.log(`✅ Content regenerated successfully: ${result.wordCount} words, SEO score: ${result.seoScore}`);
+
+      res.json({
+        success: true,
+        message: `Content regenerated successfully with ${result.wordCount} words and SEO score of ${result.seoScore}/100`,
+        wordCount: result.wordCount,
+        seoScore: result.seoScore
+      });
+    } else {
+      throw new Error('Content generation failed');
+    }
+
+  } catch (error) {
+    console.error('Content regeneration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to regenerate content',
       error: error.message
     });
   }

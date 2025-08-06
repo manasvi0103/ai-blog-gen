@@ -12,12 +12,14 @@
  */
 
 const axios = require('axios');
+const perplexityService = require('./perplexityService');
 
 class SerpService {
   constructor() {
     this.serpApiKey = process.env.SERP_API_KEY;
     this.rapidApiKey = process.env.RAPIDAPI_KEY;
     this.defaultTimeout = 15000;
+    this.usePerplexityFallback = true; // Enable Perplexity fallback
   }
 
   /**
@@ -32,7 +34,10 @@ class SerpService {
       console.log(`🔍 Searching competitors for keyword: "${keyword}"`);
 
       if (!this.serpApiKey) {
-        console.warn('SERP API key not configured, using fallback');
+        console.warn('SERP API key not configured, trying Perplexity fallback');
+        if (this.usePerplexityFallback) {
+          return await perplexityService.searchCompetitors(keyword, excludeDomain, limit);
+        }
         return this.getFallbackCompetitors(keyword, limit);
       }
 
@@ -70,6 +75,16 @@ class SerpService {
 
     } catch (error) {
       console.error('SERP search error:', error.message);
+      console.log('🔄 Trying Perplexity fallback for competitor search...');
+
+      if (this.usePerplexityFallback) {
+        try {
+          return await perplexityService.searchCompetitors(keyword, excludeDomain, limit);
+        } catch (perplexityError) {
+          console.error('Perplexity fallback also failed:', perplexityError.message);
+        }
+      }
+
       return this.getFallbackCompetitors(keyword, limit);
     }
   }
@@ -104,7 +119,55 @@ class SerpService {
 
     } catch (error) {
       console.error('Keyword analysis error:', error.message);
+      console.log('🔄 Trying Perplexity fallback for keyword analysis...');
+
+      if (this.usePerplexityFallback) {
+        try {
+          return await perplexityService.analyzeKeyword(keyword);
+        } catch (perplexityError) {
+          console.error('Perplexity keyword analysis fallback failed:', perplexityError.message);
+        }
+      }
+
       return this.getFallbackKeywordAnalysis(keyword);
+    }
+  }
+
+  /**
+   * Get trend insights using Perplexity real-time search
+   * @param {string} topic - Topic to research
+   * @returns {Object} Trend insights and market data
+   */
+  async getTrendInsights(topic) {
+    try {
+      console.log(`📈 Getting trend insights for: "${topic}"`);
+
+      if (this.usePerplexityFallback) {
+        return await perplexityService.getTrendInsights(topic);
+      }
+
+      // Fallback to basic trend analysis
+      return {
+        topic: topic,
+        insights: `Current market trends for ${topic} in the solar industry.`,
+        trends: [`Growing adoption of ${topic}`, 'Market expansion', 'Technology improvements'],
+        marketData: ['Industry growth', 'Market size data'],
+        forecasts: [`Positive outlook for ${topic}`],
+        lastUpdated: new Date().toISOString(),
+        source: 'basic'
+      };
+
+    } catch (error) {
+      console.error('Trend insights error:', error.message);
+      return {
+        topic: topic,
+        insights: `Basic trend information for ${topic}.`,
+        trends: [],
+        marketData: [],
+        forecasts: [],
+        lastUpdated: new Date().toISOString(),
+        source: 'fallback'
+      };
     }
   }
 

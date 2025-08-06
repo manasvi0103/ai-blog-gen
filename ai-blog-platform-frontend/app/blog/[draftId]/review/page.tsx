@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { Link, ExternalLink, Upload, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react"
+import { Link, ExternalLink, Upload, CheckCircle, AlertCircle, ArrowLeft, RefreshCw } from "lucide-react"
 import type { InternalLink, ExternalLink as ExternalLinkType, BlogBlock } from "@/types/api"
 import { api } from "@/lib/api"
 import { StepperHeader } from "@/components/stepper-header"
@@ -25,6 +25,7 @@ export default function ReviewPage() {
   const [deploymentSuccess, setDeploymentSuccess] = useState(false)
   const [wordpressUrl, setWordpressUrl] = useState<string | null>(null)
   const [reviewData, setReviewData] = useState<any>(null)
+  const [regenerating, setRegenerating] = useState(false)
   const router = useRouter()
   const params = useParams()
   const { toast } = useToast()
@@ -113,56 +114,82 @@ export default function ReviewPage() {
         console.log('📝 Loading real blog content from draft...')
         const content = draftData.generatedContent.blogContent
 
-        // Convert the structured content to blog blocks for preview
-        realBlogContent = [
-          {
-            id: "title-1",
-            type: "title" as const,
-            content: content.title || draftData.selectedH1 || "Blog Post Title",
-            editable: false,
-          },
-          {
-            id: "intro-1",
-            type: "introduction" as const,
-            content: content.introduction || "Introduction content will appear here...",
-            editable: true,
-            wordCount: content.introduction?.split(' ').length || 0,
-          },
-          {
-            id: "feature-img-1",
-            type: "image" as const,
-            imageType: "feature" as const,
-            alt: `${draftData.selectedKeyword} - Professional feature image`,
-            editable: false,
-          },
-          // Add sections
-          ...(content.sections || []).map((section: any, index: number) => [
+        // Handle new single content structure
+        if (content.content) {
+          // New structure with single content field
+          realBlogContent = [
             {
-              id: `section-h2-${index}`,
-              type: "section" as const,
-              h2: section.h2 || `Section ${index + 1}`,
-              content: section.content || "Section content will appear here...",
-              editable: true,
-              wordCount: section.content?.split(' ').length || 0,
-            },
-            // Add in-blog images between sections
-            {
-              id: `section-img-${index}`,
-              type: "image" as const,
-              imageType: "in-blog" as const,
-              alt: `${draftData.selectedKeyword} - Section ${index + 1} image`,
+              id: "title-1",
+              type: "title" as const,
+              content: content.title || draftData.selectedH1 || "Blog Post Title",
               editable: false,
+            },
+            {
+              id: "feature-img-1",
+              type: "image" as const,
+              imageType: "feature" as const,
+              alt: `${draftData.selectedKeyword} - Professional feature image`,
+              editable: false,
+            },
+            {
+              id: "main-content-1",
+              type: "section" as const,
+              content: content.content,
+              editable: true,
+              wordCount: content.content?.split(' ').length || 0,
             }
-          ]).flat(),
-          {
-            id: "conclusion-1",
-            type: "conclusion" as const,
-            content: content.conclusion || "Conclusion content will appear here...",
-            editable: true,
-            wordCount: content.conclusion?.split(' ').length || 0,
-          },
-
-        ]
+          ]
+        } else {
+          // Legacy structure with separate introduction/sections/conclusion
+          realBlogContent = [
+            {
+              id: "title-1",
+              type: "title" as const,
+              content: content.title || draftData.selectedH1 || "Blog Post Title",
+              editable: false,
+            },
+            {
+              id: "intro-1",
+              type: "introduction" as const,
+              content: content.introduction || "Introduction content will appear here...",
+              editable: true,
+              wordCount: content.introduction?.split(' ').length || 0,
+            },
+            {
+              id: "feature-img-1",
+              type: "image" as const,
+              imageType: "feature" as const,
+              alt: `${draftData.selectedKeyword} - Professional feature image`,
+              editable: false,
+            },
+            // Add sections
+            ...(content.sections || []).map((section: any, index: number) => [
+              {
+                id: `section-h2-${index}`,
+                type: "section" as const,
+                h2: section.h2 || `Section ${index + 1}`,
+                content: section.content || "Section content will appear here...",
+                editable: true,
+                wordCount: section.content?.split(' ').length || 0,
+              },
+              // Add in-blog images between sections
+              {
+                id: `section-img-${index}`,
+                type: "image" as const,
+                imageType: "in-blog" as const,
+                alt: `${draftData.selectedKeyword} - Section ${index + 1} image`,
+                editable: false,
+              }
+            ]).flat(),
+            {
+              id: "conclusion-1",
+              type: "conclusion" as const,
+              content: content.conclusion || "Conclusion content will appear here...",
+              editable: true,
+              wordCount: content.conclusion?.split(' ').length || 0,
+            },
+          ]
+        }
 
         console.log(`✅ Loaded ${realBlogContent.length} content blocks for preview`)
       } else {
@@ -208,7 +235,51 @@ export default function ReviewPage() {
     }
   }
 
+  const regenerateContent = async () => {
+    try {
+      setRegenerating(true)
 
+      toast({
+        title: "🔄 Regenerating Content",
+        description: "Creating improved content with better structure and SEO...",
+      })
+
+      const response = await fetch(`/api/drafts/${draftId}/regenerate-content`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to regenerate content')
+      }
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "✅ Content Regenerated!",
+          description: "Content has been improved with better structure, SEO optimization, and professional formatting.",
+        })
+
+        // Reload the review data to show new content
+        await loadReviewData()
+      } else {
+        throw new Error(result.message || 'Failed to regenerate content')
+      }
+
+    } catch (error) {
+      console.error('Error regenerating content:', error)
+      toast({
+        title: "Error",
+        description: "Failed to regenerate content. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setRegenerating(false)
+    }
+  }
 
   const handleDeploy = async () => {
     // Redirect to deployment loading page
@@ -444,8 +515,35 @@ export default function ReviewPage() {
                   {!deploymentSuccess ? (
                     <div className="space-y-3">
                       <Button
+                        onClick={regenerateContent}
+                        disabled={regenerating || deploying}
+                        variant="outline"
+                        className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
+                        {regenerating ? "Regenerating..." : "🚀 Regenerate with Improved Content"}
+                      </Button>
+
+                      {regenerating && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+                            <span className="text-orange-800 text-sm font-medium">
+                              Regenerating with improved structure...
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-600 text-center space-y-1">
+                            <div>✓ Fixing duplicate H2 headings</div>
+                            <div>✓ Improving content structure</div>
+                            <div>✓ Optimizing SEO and word count</div>
+                            <div className="animate-pulse">⏳ Creating professional content...</div>
+                          </div>
+                        </div>
+                      )}
+
+                      <Button
                         onClick={handleDeploy}
-                        disabled={deploying}
+                        disabled={deploying || regenerating}
                         className="w-full bg-[#0066cc] hover:bg-blue-700 disabled:opacity-50"
                       >
                         <Upload className="h-4 w-4 mr-2" />

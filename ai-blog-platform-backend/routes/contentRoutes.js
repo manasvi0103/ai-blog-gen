@@ -2,6 +2,8 @@
 const express = require('express');
 const ContentBlock = require('../models/ContentBlock');
 const geminiService = require('../services/geminiService');
+const serpService = require('../services/serpService');
+const perplexityService = require('../services/perplexityService');
 const router = express.Router();
 
 // Test endpoint for Gemini service
@@ -129,6 +131,82 @@ router.post('/:id/select', async (req, res) => {
     res.json(contentBlock);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// Test endpoint for SERP service with Perplexity fallback
+router.post('/test-serp-fallback', async (req, res) => {
+  try {
+    const { keyword } = req.body;
+
+    if (!keyword) {
+      return res.status(400).json({ message: 'Keyword is required' });
+    }
+
+    console.log('🧪 Testing SERP service with Perplexity fallback for keyword:', keyword);
+
+    // Test competitor search with fallback
+    const competitors = await serpService.searchCompetitors(keyword, '', 5);
+
+    // Test keyword analysis with fallback
+    const analysis = await serpService.analyzeKeyword(keyword);
+
+    // Test trend insights (Perplexity only)
+    const trends = await serpService.getTrendInsights(keyword);
+
+    res.json({
+      success: true,
+      keyword: keyword,
+      competitors: competitors,
+      analysis: analysis,
+      trends: trends,
+      message: 'SERP service with Perplexity fallback tested successfully'
+    });
+  } catch (error) {
+    console.error('SERP fallback test error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      service: 'SERP with Perplexity fallback'
+    });
+  }
+});
+
+// Test endpoint for Perplexity service directly
+router.post('/test-perplexity', async (req, res) => {
+  try {
+    const { keyword } = req.body;
+
+    if (!keyword) {
+      return res.status(400).json({ message: 'Keyword is required' });
+    }
+
+    console.log('🧪 Testing Perplexity service directly for keyword:', keyword);
+
+    // Test Perplexity competitor search
+    const competitors = await perplexityService.searchCompetitors(keyword, '', 5);
+
+    // Test Perplexity keyword analysis
+    const analysis = await perplexityService.analyzeKeyword(keyword);
+
+    // Test Perplexity trend insights
+    const trends = await perplexityService.getTrendInsights(keyword);
+
+    res.json({
+      success: true,
+      keyword: keyword,
+      competitors: competitors,
+      analysis: analysis,
+      trends: trends,
+      message: 'Perplexity service tested successfully'
+    });
+  } catch (error) {
+    console.error('Perplexity test error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      service: 'Perplexity AI'
+    });
   }
 });
 

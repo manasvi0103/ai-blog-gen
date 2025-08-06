@@ -110,9 +110,10 @@ export function ContentBlock({
             )}
           </div>
         )}
-        <div className="text-gray-800 leading-relaxed text-base whitespace-pre-wrap font-normal">
-          {makeLinksClickable(block.content)}
-        </div>
+        <div
+          className="text-gray-800 leading-relaxed text-base font-normal prose prose-lg max-w-none"
+          dangerouslySetInnerHTML={{ __html: makeLinksClickable(block.content) }}
+        />
         {selectedKeyword && includesKeyword && !block.h2 && (
           <div className="mt-3">
             <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
